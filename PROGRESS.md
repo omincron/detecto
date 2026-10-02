@@ -6,6 +6,15 @@ Running log of what's been built, what's in progress, and what's planned. Read
 Workflow: built in milestones (see plan below). Each milestone is implemented, then
 summarized here with the decisions made, before moving to the next.
 
+Testing gate (end of every milestone), using the agents in `.claude/agents/`:
+1. `test-planner` writes `test-plans/milestone-N.md` from the spec. A human reviews it and
+   resolves its open questions.
+2. `test-generator` implements the plan as tests and runs them. It doesn't fix anything.
+3. `test-healer` sorts each failure into one of three classes: a test bug (it fixes the
+   test), a clear app bug (it fixes the app), or unclear (it changes nothing and the case
+   goes to human review). It writes `test-plans/milestone-N-healer-report.md`.
+A milestone is done only when the suite passes and the human-review items are resolved.
+
 ## Status: Milestone 1 complete — Backend skeleton
 
 ## Plan (milestones)
