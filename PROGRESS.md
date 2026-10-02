@@ -15,13 +15,13 @@ Testing gate (end of every milestone), using the agents in `.claude/agents/`:
    goes to human review). It writes `test-plans/milestone-N-healer-report.md`.
 A milestone is done only when the suite passes and the human-review items are resolved.
 
-## Status: Milestone 2 complete — Storage
+## Status: Milestone 3 complete — Frontend detection view
 
 ## Plan (milestones)
 
 1. **Backend skeleton** — FastAPI app, YOLOv8 model loading, `/detect` on a single image *(done)*
 2. **Storage** — SQLite schema, `/history`, `/reset` *(done)*
-3. **Frontend detection view** — upload + bounding box overlay
+3. **Frontend detection view** — upload + bounding box overlay *(done)*
 4. **Frontend history view** — table/chart + filters
 5. **Evaluation** — run the 10 sample images, fill in README metrics table
 6. **Bonus (optional)** — webcam/alerts/heatmaps/etc.
@@ -215,6 +215,102 @@ App fixes:
 
 **Result: 163/163 pass.** `test-healer` was not needed, because no failures were left
 to sort.
+
+### 2026-10-02 — Milestone 3: frontend detection view
+
+Built:
+- **Setup:** `frontend/` is Vite 8 + React 19 (JS/JSX, per ARCHITECTURE.md). Vitest,
+  Testing Library and jsdom are set up from the start (`npm test`), so the testing gate
+  doesn't begin with environment fixes like M1's did. `frontend/.env` sets
+  `VITE_API_BASE_URL=http://localhost:8000`.
+- **`src/api/client.js`:** `detectPeople(file)`. It's the only place that knows the URL
+  and the response shape, and it raises `ApiError` with a displayable message.
+- **`src/utils/bbox.js`:** `bboxToPercentRect`, which holds all the box math, plus
+  formatting helpers.
+- **Components:**
+  - `ImageUploader`: file picker, drag-and-drop, and sample buttons read from
+    `public/samples/index.json`.
+  - `BoundingBoxOverlay`: percent-positioned boxes labelled `#n · NN%`.
+  - `DetectionSummary`: count, average confidence, model time, total time and the list
+    of people with their confidence. Hovering a list entry highlights its box, and
+    hovering a box highlights its entry.
+- **Pages:** `DetectionView`, plus a placeholder `HistoryView` (M4). `App` switches
+  between them with state.
+- **Samples:** `public/samples/` has `bus.jpg` and `zidane.jpg`, copied from
+  ultralytics' bundled assets. M5 brings this to the required 10.
+
+**Checked:**
+- `vite build` succeeds.
+- With both servers running, the CORS preflight from `localhost:5173` is allowed,
+  `zidane.jpg` returns 2 people at 1280×720, and the wrong file type returns a readable
+  415.
+- A throwaway jsdom render showed the boxes and count on success, the backend's message
+  on a 415, and "can't reach the server" on a network error.
+- Not checked visually in a browser: the Chrome extension wasn't connected.
+
+**Decisions made:**
+- **Boxes as percentages of the processed frame,** not pixel scaling by displayed size.
+  This needs no resize handling. ARCHITECTURE.md §4.2 is updated.
+- **The `<img>` shows the original upload** (an object URL), and the boxes are drawn in
+  the browser. `return_annotated` isn't used: it would roughly double the response size,
+  and boxes in the DOM can be highlighted and toggled.
+- **Format and size are validated by the backend only,** so its rules exist in one
+  place. The file picker's `accept` attribute just narrows the dialog.
+- **Stale responses:** if a new image is picked mid-request, the older response is
+  ignored.
+- **No router:** two pages managed with state.
+- Streaming and webcam input are not part of M3; they're the bonus in instructions.md.
+
+**M2 bug found and fixed:** the per-detection `INFO` log line never appeared under
+uvicorn. The `backend` logger had no handler, and uvicorn only configures its own
+loggers. M2's test passed anyway because pytest's log capture doesn't depend on handlers.
+`main.py` now attaches a handler to the `backend` logger. Verified in the live server
+log, and 163/163 backend tests pass.
+
+**Testing gate:** `test-planner` wrote `test-plans/milestone-3.md` (64 automated cases
+and 12 manual browser checks). A first browser check through Claude in Chrome
+confirmed the boxes align on `zidane.jpg` and `bus.jpg`. The user resolved the open
+questions (see the plan's "Resolved decisions"):
+- **Uploader during a detection:** stays enabled, so a slow or hung request can be
+  replaced.
+- **Late sample downloads:** dropped once a newer selection has been made.
+- **Missing samples:** a non-image sample download counts as a failed sample load.
+- **`formatMs`:** rounds before choosing the unit.
+- **Tall images:** the displayed image is capped at about 75% of the viewport height.
+- **Accepted as is:** the hard-coded "up to 10 MB" hint (note it in the README in M5).
+- **Leaving the Detect page discards the result:** revisit in M4.
+
+`test-generator` wrote 78 frontend tests (Vitest, Testing Library) and 5 backend tests:
+the logger reaching a real handler, including a live uvicorn run, and EXIF frame size.
+First run: 74/78 frontend passed. All 4 failures were the agreed changes (OQ-1 to OQ-4),
+and the backend had 168/168.
+
+App fixes:
+- The uploader stays enabled during a detection.
+- Sample loads are dropped once a newer selection has been made, or if the uploader is
+  disabled.
+- A non-image sample download counts as a failed load.
+- `formatMs` rounds first.
+- `.overlay__image` has `max-height: 75vh`.
+
+**Result:** frontend 78/78 and backend 168/168. `test-healer` was not needed.
+
+**Manual checks (Claude in Chrome, real browser): all 12 pass.** Each was measured in the
+DOM (box positions against the image rect, aspect ratios, elements) because screenshots
+timed out. The first check was also confirmed visually.
+- **Alignment:** at native size; through a resize to 500px, which gives the single-column
+  layout; on a 4000px photo downscaled to 1280; on a 3000×600 panorama; on an
+  EXIF-rotated photo, shown upright at 810×1080, matching the backend; and on a 200×150
+  image shown at natural size.
+- **Labels:** a top-edge label is readable and not covered.
+- **Crowd of 36:** hover highlights the right box for 36 of 36 entries in about one frame,
+  and the toggle hides and shows all boxes.
+- **Errors:** GIF, .txt, a 0-byte file, an 11 MB file and a stopped backend each show a
+  readable alert, and the page recovers.
+- **Network:** one POST per upload, with no query parameters.
+- **Height cap:** a tall image displays at 75vh.
+- **Frozen backend (`kill -STOP`):** the uploader stays usable, and after `kill -CONT`
+  only the newer image's result is shown.
 
 ## Open decisions for later milestones
 

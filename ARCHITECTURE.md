@@ -208,11 +208,19 @@ WARMUP_MODEL=true
 
 ### 4.2 Key component: `BoundingBoxOverlay`
 
-The most bug-prone piece. Contract: it receives the **natural image dimensions**
-(width/height at inference time) and the **displayed dimensions** (after CSS
-scaling), and scales each `bbox` by `displayed / natural` before drawing — either as
-absolutely-positioned `<div>`s over an `<img>`, or as an SVG/`<canvas>` layer. Keep
-box-scaling math in one place so it's tested once, not per-usage.
+The most bug-prone piece. Contract: it receives the **frame dimensions the boxes
+refer to**, which are the backend's `image_width`/`image_height` (the processed, possibly
+downscaled frame), not the uploaded file's own size.
+
+*As built (M3):*
+- Each `bbox` is converted to **percentages of that frame**
+  (`utils/bbox.js → bboxToPercentRect`) and drawn as an absolutely-positioned `<div>`
+  over the `<img>`.
+- Because the boxes are in percentages, they follow the displayed image at any size
+  through CSS alone. There's no need to measure displayed dimensions or re-render on
+  resize, which also keeps rendering smooth with many detections.
+- The processed frame is a uniform downscale of the upload, so the aspect ratios match.
+- All the box math lives in that one function, so it's tested once.
 
 ### 4.3 State & data flow
 
@@ -221,7 +229,18 @@ box-scaling math in one place so it's tested once, not per-usage.
   encapsulate the polling/websocket loop.
 - `src/api/client.js` is the only place that knows the backend base URL
   (`VITE_API_BASE_URL`) and response shape — pages/components consume typed
-  JS objects, not raw fetch calls.
+  JS objects, not raw fetch calls. It maps snake_case to camelCase, and turns any failure into an
+  `ApiError` whose message can be shown as-is: the backend's `detail`, or a "can't reach
+  the server" message.
+- Navigation between the two pages is plain component state, with no router dependency.
+- Demo images in `public/samples/` are listed in `public/samples/index.json`
+  (`[{file, label}]`), because a static site can't list a folder.
+- DetectionView shows two timings:
+  - **model time**, the backend's `inference_time_ms`;
+  - **total time**, the browser's round trip: upload, server and response.
+
+  If a new image is picked while one is still processing, only the latest response is
+  shown.
 
 ## 5. Testing & evaluation
 

@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -9,6 +10,15 @@ from fastapi.responses import JSONResponse
 from backend import config
 from backend.routes import detect, history
 from backend.services.detector import get_detector
+
+# uvicorn only configures its own loggers; without this, the app's INFO lines (e.g. the
+# per-detection performance log in routes/detect.py) are silently dropped.
+_app_logger = logging.getLogger("backend")
+if not _app_logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s - %(message)s"))
+    _app_logger.addHandler(_handler)
+    _app_logger.setLevel(logging.INFO)
 
 
 @asynccontextmanager
