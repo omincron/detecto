@@ -1,28 +1,59 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from backend import config
 from backend.models.record import Detection, DetectionResponse
 from backend.services.detector import PersonDetector, get_detector
-from backend.utils.preprocessing import decode_image, encode_image_base64, preprocess_image
+from backend.utils.preprocessing import (
+    decode_image,
+    encode_image_base64,
+    preprocess_image,
+    sniff_image_format,
+)
 
 router = APIRouter()
 
-SUPPORTED_CONTENT_TYPES = {"image/jpeg", "image/png"}
+# Declared Content-Type is only a first filter; the magic bytes decide the real format.
+ALLOWED_DECLARED_TYPES = {"image/jpeg", "image/jpg", "image/png", "application/octet-stream"}
+SUPPORTED_FORMATS = {"JPEG", "PNG"}
 
 
 @router.post("/detect", response_model=DetectionResponse)
 async def detect_people(
-    image: UploadFile = File(...),
+    # Optional here so a missing file is our 400 with a string detail, not FastAPI's 422 list.
+    image: UploadFile | None = File(None),
     return_annotated: bool = False,
     detector: PersonDetector = Depends(get_detector),
 ):
-    if image.content_type not in SUPPORTED_CONTENT_TYPES:
+    if image is None:
+        raise HTTPException(
+            status_code=400, detail="No image file provided (expected form field 'image')"
+        )
+
+    declared_type = (image.content_type or "").split(";")[0].strip().lower()
+    if declared_type and declared_type not in ALLOWED_DECLARED_TYPES:
         raise HTTPException(
             status_code=415, detail=f"Unsupported file type: {image.content_type}"
         )
 
-    raw_bytes = await image.read()
+    max_bytes = config.MAX_UPLOAD_BYTES
+    raw_bytes = await image.read(max_bytes + 1)
     if not raw_bytes:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(raw_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=413, detail=f"File too large (max {max_bytes / (1024 * 1024):g} MB)"
+        )
+
+    image_format = sniff_image_format(raw_bytes)
+    if image_format is not None and image_format not in SUPPORTED_FORMATS:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported image format: {image_format}. Only JPEG and PNG are accepted",
+        )
+    if image_format is None:
+        raise HTTPException(
+            status_code=400, detail="Could not decode image — unsupported or corrupt file"
+        )
 
     try:
         decoded = decode_image(raw_bytes)

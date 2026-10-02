@@ -11,3 +11,6 @@ MODEL_PATH = os.getenv("MODEL_PATH", "yolov8n.pt")
 CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.5"))
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).resolve().parent / "detecto.db"))
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+# Run one dummy inference at startup so the first real request isn't paying for warm-up.
+WARMUP_MODEL = os.getenv("WARMUP_MODEL", "true").strip().lower() not in {"0", "false", "no", "off"}

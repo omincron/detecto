@@ -103,6 +103,45 @@ Built and smoke-tested:
 **Next:** Milestone 2 — SQLite storage, wire `/detect` to save a summary record,
 add `/history` and `/reset`.
 
+### 2026-10-02 — Milestone 1 testing gate (passed)
+
+- `test-planner` wrote `test-plans/milestone-1.md` and raised 12 open questions. The user
+  resolved them all; see the plan's "Resolved decisions" section. Summary:
+  - **Deferred:** base64 JSON input to `/detect` (to a later milestone); server-side
+    performance logging (to M2, where inference time is persisted per request).
+  - **App changes agreed:**
+    - Missing file → 400 with a string `detail`.
+    - Format checked by magic bytes, with a lenient declared Content-Type.
+    - Each side clamped to ≥ 1px on resize.
+    - `decode_image(b"")` raises `ValueError`.
+    - 413 above `MAX_UPLOAD_BYTES` (default 10 MiB).
+    - Model warm-up at startup via a lifespan (`WARMUP_MODEL`, default on). This reverses
+      the earlier "no lifespan" decision: loading stays lazy and cached, and the lifespan
+      just triggers it early.
+  - **Documented as-is (ARCHITECTURE.md §3.3):**
+    - Opt-in `return_annotated`.
+    - `image_width`/`image_height`.
+    - Float, predict-only `inference_time_ms`.
+    - Threshold is strictly greater than `CONFIDENCE_THRESHOLD`.
+- Test env fixed:
+  - The stray `opencv-python` 4.11 was removed, leaving the pinned headless 4.10.
+  - `pytest` and `httpx2` were added via `requirements-dev.txt`, and a root `pytest.ini`
+    was added.
+  - `pip check` warns that ultralytics wants `opencv-python`; the headless build provides
+    the same `cv2` and works.
+- Order: generate tests (the agreed app changes fail first), then fix the app, then run
+  `test-healer` on any remaining failures.
+- `test-generator` wrote 71 tests in `backend/tests/` (66 unit, 5 `integration` on the
+  real model). The first run had 50 passing and 21 failing; every failure was one of the
+  agreed app changes above, and none were unexpected.
+- Implemented the app changes. These touched `config.py`, `main.py` (warm-up lifespan),
+  `routes/detect.py` (missing file, declared type, size limit, magic-byte check) and
+  `utils/preprocessing.py` (`sniff_image_format`, empty-bytes `ValueError`, 1px clamp).
+- **Result: 71/71 pass.** `test-healer` was not needed: no failures were left to sort, and
+  no human-review items came up.
+- Run: `backend/.venv/bin/python -m pytest` (add `-m "not integration"` to skip the
+  real-model tests).
+
 ## Open decisions for later milestones
 
 - Whether to persist bounding boxes in history (currently: no, only summary stats —

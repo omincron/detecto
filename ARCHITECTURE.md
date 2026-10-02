@@ -92,8 +92,8 @@ detecto/
 
 ### 3.2 Detection pipeline (per request)
 
-1. Receive image (multipart file or base64 JSON body).
-2. Validate: content-type, non-empty, decodable → else `400` with a clear message.
+1. Receive image (multipart file; base64 JSON body deferred — see §3.3).
+2. Validate: declared content-type, non-empty, size limit, magic bytes, decodable → else `400`/`413`/`415` with a clear message.
 3. Preprocess: decode bytes → array, resize to model input size, normalize.
 4. Run inference (`model.predict(...)`), timing the call.
 5. Filter detections to `person` class, apply confidence threshold.
@@ -107,7 +107,13 @@ detecto/
 ### 3.3 API contract
 
 **`POST /detect`**
-- Input: `multipart/form-data` (file field `image`) *or* `{"image_base64": "..."}`.
+- Input: `multipart/form-data` (file field `image`). A `{"image_base64": "..."}` JSON body
+  is planned but deferred past Milestone 1.
+- Query params: `return_annotated` (bool, default `false`). The annotated image is opt-in.
+- Accepted formats: JPEG and PNG, identified by the file's magic bytes. The declared
+  Content-Type is only loosely checked: `image/jpeg`, `image/jpg`, `image/png`,
+  `application/octet-stream` or none (case-insensitive) are let through to the byte check.
+- Max upload size: `MAX_UPLOAD_BYTES` (default 10 MiB).
 - Output:
 ```json
 {
@@ -116,12 +122,23 @@ detecto/
     {"bbox": [x1, y1, x2, y2], "confidence": 0.91}
   ],
   "average_confidence": 0.87,
-  "inference_time_ms": 142,
-  "annotated_image_base64": "..."   // optional
+  "inference_time_ms": 142.3,
+  "image_width": 1280,
+  "image_height": 720,
+  "annotated_image_base64": null   // base64 JPEG when return_annotated=true
 }
 ```
-- Errors: `400` invalid/missing file, `415` unsupported format, `500` inference failure
-  (all with a `{"detail": "..."}` body the frontend can display directly).
+  - `bbox` is in pixels of the *processed* frame (`image_width` x `image_height`, after
+    the resize to max 1280px on the long edge, each side ≥ 1px), not the original upload.
+  - `inference_time_ms` (float) is the model `predict` call only, excluding decode,
+    preprocessing and annotation. The model is warmed at startup (`WARMUP_MODEL`), so the
+    first request does not include warm-up.
+  - A detection is kept only if its confidence is strictly greater than `CONFIDENCE_THRESHOLD`.
+- Errors (all with a `{"detail": "<string>"}` body the frontend can display directly):
+  - `400` missing, empty, corrupt or unrecognized file
+  - `413` file larger than `MAX_UPLOAD_BYTES`
+  - `415` unsupported format: a non-image declared type, or a real non-JPEG/PNG image
+  - `500` inference failure
 
 **`GET /history`**
 - Query params: `start_date`, `end_date`, `min_confidence` (all optional).
@@ -153,6 +170,8 @@ MODEL_PATH=yolov8n.pt
 CONFIDENCE_THRESHOLD=0.5
 DB_PATH=./backend/detecto.db
 CORS_ORIGINS=http://localhost:5173
+MAX_UPLOAD_BYTES=10485760
+WARMUP_MODEL=true
 ```
 
 ## 4. Frontend architecture

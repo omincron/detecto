@@ -1,0 +1,5 @@
+-r requirements.txt
+
+# Testing
+pytest==9.0.3
+httpx2==2.13.1  # starlette>=1.6 TestClient prefers httpx2 (plain httpx is deprecated there)
