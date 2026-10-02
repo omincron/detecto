@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Group, Paper, Text, ThemeIcon } from "@mantine/core";
+import { Button, Group, Paper, Select, Text, ThemeIcon } from "@mantine/core";
 import { IconUpload } from "@tabler/icons-react";
 import { MAX_UPLOAD_MB } from "../config.js";
 
 const ACCEPT = "image/jpeg,image/png";
+// Up to this many samples show as one-click chips; more become a compact dropdown so
+// the upload bar stays one line high (the image's height cap assumes a compact bar).
+const MAX_SAMPLE_CHIPS = 4;
 
 /**
  * File picker + drag-and-drop + demo samples from public/samples/. Calls onSelect(file)
@@ -17,6 +20,7 @@ export default function ImageUploader({ onSelect, disabled = false }) {
   const [isDragging, setIsDragging] = useState(false);
   const [samples, setSamples] = useState([]);
   const [sampleError, setSampleError] = useState(null);
+  const [sampleSearch, setSampleSearch] = useState(""); // the dropdown's typed text
   // Every selection bumps this. A sample download that finishes after a newer
   // selection (or once disabled) is dropped, so it can't override the user's latest pick.
   const selectionId = useRef(0);
@@ -89,7 +93,30 @@ export default function ImageUploader({ onSelect, disabled = false }) {
           </Text>
         </div>
 
-        {samples.length > 0 && (
+        {samples.length > MAX_SAMPLE_CHIPS && (
+          <Select
+            aria-label="Try a sample image"
+            placeholder="Or try a sample…"
+            data={samples.map((sample) => ({ value: sample.file, label: sample.label ?? sample.file }))}
+            // Acts as a launcher, not a form field: it stays empty and each pick (click or
+            // Enter) loads that sample. With search, Enter takes the first match.
+            value={null}
+            searchValue={sampleSearch}
+            onSearchChange={setSampleSearch}
+            onOptionSubmit={(file) => {
+              setSampleSearch(""); // empty again right away, not only on blur
+              const sample = samples.find((s) => s.file === file);
+              if (sample) loadSample(sample);
+            }}
+            disabled={disabled}
+            searchable
+            selectFirstOptionOnChange
+            maxDropdownHeight={320}
+            w={240}
+            comboboxProps={{ shadow: "md" }}
+          />
+        )}
+        {samples.length > 0 && samples.length <= MAX_SAMPLE_CHIPS && (
           <Group gap={8} wrap="wrap">
             <Text size="sm" c="dimmed">
               Or try a sample:

@@ -1,4 +1,4 @@
-"""Real YOLOv8n model on ultralytics' bundled images."""
+"""Real YOLO model (config.MODEL_PATH) on ultralytics' bundled images."""
 
 import base64
 import statistics

@@ -18,6 +18,10 @@ if (!window.matchMedia) {
     dispatchEvent: () => false,
   });
 }
+// Mantine's Combobox scrolls the active option into view (Select search + Enter).
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
 if (!window.ResizeObserver) {
   window.ResizeObserver = class {
     observe() {}

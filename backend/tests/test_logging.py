@@ -12,6 +12,7 @@ from pathlib import Path
 
 import httpx2
 import pytest
+from ultralytics.utils import ASSETS
 
 import backend.main  # noqa: F401  (importing the app installs the handler)
 from backend import config
@@ -19,7 +20,8 @@ from backend.tests.conftest import REAL_DB
 from backend.tests.helpers import png_bytes, post_image
 
 ROOT = Path(config.PROJECT_ROOT)
-ZIDANE = ROOT / "frontend" / "public" / "samples" / "zidane.jpg"
+# 1280x720; frontend/public/samples/zidane.jpg was removed in M5 (unlicensed samples).
+ZIDANE = ASSETS / "zidane.jpg"
 
 
 def stream_handlers(logger):

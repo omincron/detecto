@@ -76,9 +76,12 @@ detecto/
 │   │   └── storage.py          # read/write to SQLite
 │   ├── utils/
 │   │   └── preprocessing.py    # decode, sniff format, resize, CLAHE, encode
-│   ├── samples/                # backend-side copies for CLI/test scripts (M5)
+│   ├── scripts/
+│   │   └── evaluate.py         # M5 evaluation: real /detect pipeline vs ground truth
+│   ├── samples/                # COCO eval images, ground_truth.json, results, CREDITS.md
 │   └── tests/                  # pytest suite (`integration` marker = real model)
 │
+├── docs/screenshots/           # README screenshots
 ├── test-plans/                 # per-milestone test plans + healer reports
 ├── requirements.txt / requirements-dev.txt
 ├── pytest.ini
@@ -202,7 +205,7 @@ view later needs per-box detail.
 ### 3.5 Configuration (`.env`)
 
 ```
-MODEL_PATH=yolov8n.pt
+MODEL_PATH=yolov8s.pt
 CONFIDENCE_THRESHOLD=0.5
 DB_PATH=./backend/detecto.db       # relative paths resolve from the project root
 CORS_ORIGINS=http://localhost:5173
@@ -325,7 +328,8 @@ rework:
 
 ## 7. Tech stack rationale
 
-- **YOLOv8n via `ultralytics`**: pretrained on COCO (includes `person`), CPU-friendly,
+- **YOLOv8 via `ultralytics`** (YOLOv8n at first, **YOLOv8s since M5**, when the evaluation showed
+  n missed the accuracy target; see README "Model and threshold comparison"): pretrained on COCO (includes `person`), CPU-friendly,
   minimal setup — avoids training entirely, matching the project's "pretrained model"
   requirement.
 - **SQLite**: zero-setup persistence that still supports the date/confidence filtering

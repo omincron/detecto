@@ -1,4 +1,5 @@
-"""config.py env parsing. Each test reloads backend.config, then restores it."""
+"""config.py env parsing. Each test reloads backend.config, then restores it (the `env`
+fixture lives in conftest.py)."""
 
 import importlib
 from pathlib import Path
@@ -11,18 +12,6 @@ from backend import config
 from backend.tests.helpers import png_bytes
 
 REPO_ROOT = Path(backend.__file__).resolve().parent.parent
-
-
-@pytest.fixture
-def env(monkeypatch):
-    """MonkeyPatch for env vars; config is reloaded with the original env afterwards."""
-    # reload() keeps attributes the module no longer defines, so drop values
-    # set by other fixtures (restored by monkeypatch on teardown).
-    monkeypatch.delattr(config, "WARMUP_MODEL", raising=False)
-    monkeypatch.delattr(config, "MAX_UPLOAD_BYTES", raising=False)
-    with pytest.MonkeyPatch.context() as mp:
-        yield mp
-    importlib.reload(config)
 
 
 def test_env_overrides_and_types(env):

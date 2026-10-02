@@ -1,4 +1,66 @@
 [
-  { "file": "bus.jpg", "label": "Street with bus" },
-  { "file": "zidane.jpg", "label": "Two people" }
+  {
+    "file": "coco-96493.jpg",
+    "label": "One person"
+  },
+  {
+    "file": "coco-473237.jpg",
+    "label": "Close-up"
+  },
+  {
+    "file": "coco-252219.jpg",
+    "label": "Street"
+  },
+  {
+    "file": "coco-180560.jpg",
+    "label": "Dim room"
+  },
+  {
+    "file": "coco-541055.jpg",
+    "label": "Skiers"
+  },
+  {
+    "file": "coco-352684.jpg",
+    "label": "Lobby"
+  },
+  {
+    "file": "coco-274460.jpg",
+    "label": "Beach group"
+  },
+  {
+    "file": "coco-441543.jpg",
+    "label": "Umbrella crowd"
+  },
+  {
+    "file": "coco-532690.jpg",
+    "label": "Partly visible"
+  },
+  {
+    "file": "coco-392722.jpg",
+    "label": "Distant people"
+  },
+  {
+    "file": "coco-23899.jpg",
+    "label": "Dark room"
+  },
+  {
+    "file": "coco-389109.jpg",
+    "label": "Night dinner"
+  },
+  {
+    "file": "coco-538364.jpg",
+    "label": "Night street"
+  },
+  {
+    "file": "coco-34873.jpg",
+    "label": "Kitchen (no people)"
+  },
+  {
+    "file": "coco-23751.jpg",
+    "label": "Statue (no people)"
+  },
+  {
+    "file": "coco-180296.jpg",
+    "label": "Doll (no people)"
+  }
 ]

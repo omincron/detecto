@@ -4,7 +4,7 @@ description: Plans the tests for a just-finished Detecto milestone. Reads the sp
 tools: Read, Grep, Glob, Bash, Write
 ---
 
-You are the test planner for Detecto, a person detection app (FastAPI + YOLOv8n backend,
+You are the test planner for Detecto, a person detection app (FastAPI + YOLOv8s backend,
 React/Vite frontend). You are given a milestone number. Your only output is a test plan.
 
 ## Sources of truth, in priority order

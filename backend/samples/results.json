@@ -1,0 +1,340 @@
+{
+  "summary": {
+    "images": 16,
+    "runs_per_image": 3,
+    "visible_persons": 69,
+    "correct_detections": 59,
+    "missed": 10,
+    "false_positives": 6,
+    "detection_accuracy_pct": 85.5072463768116,
+    "false_positive_pct": 9.23076923076923,
+    "avg_inference_ms": 152.33843191678412,
+    "avg_round_trip_ms": 170.95815954182095,
+    "avg_confidence": 0.7926518472574525,
+    "reliability_pct": 100.0,
+    "confidence_threshold": 0.5,
+    "model": "yolov8s.pt",
+    "manual_review": {
+      "correct": 60,
+      "false_positives": 5,
+      "detection_accuracy_pct": 86.95652173913044,
+      "false_positive_pct": 7.6923076923076925,
+      "applied": [
+        "coco-96493.jpg"
+      ]
+    }
+  },
+  "images": [
+    {
+      "file": "coco-96493.jpg",
+      "scenario": "single",
+      "description": "One person on a couch",
+      "status": 200,
+      "visible": 1,
+      "correct": 0,
+      "missed": 1,
+      "false_positives": 1,
+      "ignored_small": 0,
+      "correct_confidences": [],
+      "detected": 1,
+      "inference_ms": 151.21293800014732,
+      "round_trip_ms": 205.41488333280236
+    },
+    {
+      "file": "coco-473237.jpg",
+      "scenario": "single",
+      "description": "Close-up, one person eating",
+      "status": 200,
+      "visible": 1,
+      "correct": 1,
+      "missed": 0,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.8653125166893005
+      ],
+      "detected": 1,
+      "inference_ms": 153.37248766688086,
+      "round_trip_ms": 168.39445766648473
+    },
+    {
+      "file": "coco-252219.jpg",
+      "scenario": "small-group",
+      "description": "Street, three pedestrians",
+      "status": 200,
+      "visible": 3,
+      "correct": 3,
+      "missed": 0,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.9299681186676025,
+        0.9241610765457153,
+        0.8935483694076538
+      ],
+      "detected": 3,
+      "inference_ms": 148.1005016673104,
+      "round_trip_ms": 164.9354293355524
+    },
+    {
+      "file": "coco-180560.jpg",
+      "scenario": "small-group",
+      "description": "Two people, dim indoor light",
+      "status": 200,
+      "visible": 2,
+      "correct": 2,
+      "missed": 0,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.9144543409347534,
+        0.8776511549949646
+      ],
+      "detected": 2,
+      "inference_ms": 152.31117099877642,
+      "round_trip_ms": 168.9395396654921
+    },
+    {
+      "file": "coco-541055.jpg",
+      "scenario": "group",
+      "description": "Five skiers",
+      "status": 200,
+      "visible": 5,
+      "correct": 5,
+      "missed": 0,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.9160915017127991,
+        0.8877939581871033,
+        0.8800433874130249,
+        0.8289284110069275,
+        0.700842022895813
+      ],
+      "detected": 5,
+      "inference_ms": 141.9535430019702,
+      "round_trip_ms": 156.462043999151
+    },
+    {
+      "file": "coco-352684.jpg",
+      "scenario": "group",
+      "description": "Nine people in a lobby, some occluded",
+      "status": 200,
+      "visible": 9,
+      "correct": 8,
+      "missed": 1,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.8951050043106079,
+        0.8717280626296997,
+        0.8664836287498474,
+        0.8421628475189209,
+        0.8252401947975159,
+        0.6695213913917542,
+        0.6456756591796875,
+        0.5985491871833801
+      ],
+      "detected": 8,
+      "inference_ms": 152.03767600056986,
+      "round_trip_ms": 168.9694590010428
+    },
+    {
+      "file": "coco-274460.jpg",
+      "scenario": "crowd",
+      "description": "Beach group of thirteen",
+      "status": 200,
+      "visible": 13,
+      "correct": 13,
+      "missed": 0,
+      "false_positives": 1,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.8995010256767273,
+        0.8926451802253723,
+        0.891999363899231,
+        0.885425865650177,
+        0.8762609958648682,
+        0.8595000505447388,
+        0.8155316114425659,
+        0.8152934908866882,
+        0.7967951893806458,
+        0.7479236125946045,
+        0.6847835183143616,
+        0.6705970168113708,
+        0.5852478742599487
+      ],
+      "detected": 14,
+      "inference_ms": 165.99024433404944,
+      "round_trip_ms": 183.3485760022692
+    },
+    {
+      "file": "coco-441543.jpg",
+      "scenario": "crowd",
+      "description": "Dense crowd under an umbrella, heavy occlusion",
+      "status": 200,
+      "visible": 13,
+      "correct": 8,
+      "missed": 5,
+      "false_positives": 1,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.8297883868217468,
+        0.807334840297699,
+        0.7746363282203674,
+        0.6868495345115662,
+        0.6324729919433594,
+        0.6305059194564819,
+        0.6172423362731934,
+        0.502113401889801
+      ],
+      "detected": 9,
+      "inference_ms": 136.1495433326733,
+      "round_trip_ms": 152.96378800000335
+    },
+    {
+      "file": "coco-532690.jpg",
+      "scenario": "occlusion",
+      "description": "Partly visible people at the frame edges",
+      "status": 200,
+      "visible": 3,
+      "correct": 3,
+      "missed": 0,
+      "false_positives": 1,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.8645988702774048,
+        0.8133638501167297,
+        0.7721870541572571
+      ],
+      "detected": 4,
+      "inference_ms": 184.56933299967204,
+      "round_trip_ms": 202.1763066671459
+    },
+    {
+      "file": "coco-392722.jpg",
+      "scenario": "distant",
+      "description": "Small, distant people near a bus",
+      "status": 200,
+      "visible": 5,
+      "correct": 5,
+      "missed": 0,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.8841826915740967,
+        0.8826178908348083,
+        0.8635756373405457,
+        0.7111425995826721,
+        0.571958601474762
+      ],
+      "detected": 5,
+      "inference_ms": 157.27581799971327,
+      "round_trip_ms": 172.4053436652563
+    },
+    {
+      "file": "coco-23899.jpg",
+      "scenario": "low-light",
+      "description": "Dark room lit by a projector",
+      "status": 200,
+      "visible": 3,
+      "correct": 2,
+      "missed": 1,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.8116809129714966,
+        0.643494188785553
+      ],
+      "detected": 2,
+      "inference_ms": 150.1373203342761,
+      "round_trip_ms": 166.95073399993512
+    },
+    {
+      "file": "coco-389109.jpg",
+      "scenario": "low-light",
+      "description": "Night, outdoor restaurant",
+      "status": 200,
+      "visible": 6,
+      "correct": 5,
+      "missed": 1,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.8233658075332642,
+        0.8086735606193542,
+        0.7984208464622498,
+        0.6713467836380005,
+        0.6050594449043274
+      ],
+      "detected": 5,
+      "inference_ms": 151.22768199944403,
+      "round_trip_ms": 165.69692233315436
+    },
+    {
+      "file": "coco-538364.jpg",
+      "scenario": "low-light",
+      "description": "Night street with pedestrians and a motorcycle",
+      "status": 200,
+      "visible": 5,
+      "correct": 4,
+      "missed": 1,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [
+        0.9069597125053406,
+        0.8939924240112305,
+        0.8780821561813354,
+        0.8260465860366821
+      ],
+      "detected": 4,
+      "inference_ms": 161.58895300031872,
+      "round_trip_ms": 180.15581233460884
+    },
+    {
+      "file": "coco-34873.jpg",
+      "scenario": "negative",
+      "description": "Kitchen, no people",
+      "status": 200,
+      "visible": 0,
+      "correct": 0,
+      "missed": 0,
+      "false_positives": 0,
+      "ignored_small": 0,
+      "correct_confidences": [],
+      "detected": 0,
+      "inference_ms": 158.44435633334797,
+      "round_trip_ms": 175.4458239993255
+    },
+    {
+      "file": "coco-23751.jpg",
+      "scenario": "negative",
+      "description": "Statue of a person (look-alike), no people",
+      "status": 200,
+      "visible": 0,
+      "correct": 0,
+      "missed": 0,
+      "false_positives": 1,
+      "ignored_small": 0,
+      "correct_confidences": [],
+      "detected": 1,
+      "inference_ms": 147.34235166664197,
+      "round_trip_ms": 163.7313133336041
+    },
+    {
+      "file": "coco-180296.jpg",
+      "scenario": "negative",
+      "description": "Doll on a suitcase (look-alike), no people",
+      "status": 200,
+      "visible": 0,
+      "correct": 0,
+      "missed": 0,
+      "false_positives": 1,
+      "ignored_small": 0,
+      "correct_confidences": [],
+      "detected": 1,
+      "inference_ms": 125.7009913327541,
+      "round_trip_ms": 139.34011933330717
+    }
+  ]
+}

@@ -1,0 +1,686 @@
+{
+  "source": "COCO 2017 val (cocodataset.org), images under CC BY / CC BY-SA licences",
+  "match_iou": 0.5,
+  "min_visible_height_px": 20,
+  "visible_rule": "A ground-truth person counts as visible if its box is at least 20px tall in the original image; smaller ones are ignored (neither missed nor false positives).",
+  "images": [
+    {
+      "file": "coco-96493.jpg",
+      "coco_id": 96493,
+      "scenario": "single",
+      "description": "One person on a couch",
+      "width": 426,
+      "height": 640,
+      "visible_persons": 1,
+      "persons_xywh": [
+        [
+          122.5,
+          2.2,
+          289.7,
+          393.5
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm4.staticflickr.com/3226/3076742158_8615337d86_z.jpg"
+    },
+    {
+      "file": "coco-473237.jpg",
+      "coco_id": 473237,
+      "scenario": "single",
+      "description": "Close-up, one person eating",
+      "width": 640,
+      "height": 426,
+      "visible_persons": 1,
+      "persons_xywh": [
+        [
+          48.8,
+          0.0,
+          570.6,
+          420.3
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm9.staticflickr.com/8076/8343979767_679dfefda2_z.jpg"
+    },
+    {
+      "file": "coco-252219.jpg",
+      "coco_id": 252219,
+      "scenario": "small-group",
+      "description": "Street, three pedestrians",
+      "width": 640,
+      "height": 428,
+      "visible_persons": 3,
+      "persons_xywh": [
+        [
+          326.3,
+          174.6,
+          71.2,
+          197.2
+        ],
+        [
+          9.8,
+          167.1,
+          121.9,
+          226.4
+        ],
+        [
+          510.4,
+          171.3,
+          123.7,
+          215.8
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm4.staticflickr.com/3446/3232237447_13d84bd0a1_z.jpg"
+    },
+    {
+      "file": "coco-180560.jpg",
+      "coco_id": 180560,
+      "scenario": "small-group",
+      "description": "Two people, dim indoor light",
+      "width": 640,
+      "height": 426,
+      "visible_persons": 2,
+      "persons_xywh": [
+        [
+          251.2,
+          55.4,
+          354.4,
+          370.6
+        ],
+        [
+          1.0,
+          8.9,
+          367.6,
+          412.6
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm9.staticflickr.com/8373/8410408682_986cd1a140_z.jpg"
+    },
+    {
+      "file": "coco-541055.jpg",
+      "coco_id": 541055,
+      "scenario": "group",
+      "description": "Five skiers",
+      "width": 640,
+      "height": 360,
+      "visible_persons": 5,
+      "persons_xywh": [
+        [
+          271.5,
+          80.0,
+          64.2,
+          203.8
+        ],
+        [
+          201.5,
+          101.9,
+          86.4,
+          222.8
+        ],
+        [
+          154.5,
+          78.1,
+          54.2,
+          235.1
+        ],
+        [
+          325.2,
+          79.3,
+          163.4,
+          247.6
+        ],
+        [
+          209.2,
+          52.9,
+          66.4,
+          104.4
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm4.staticflickr.com/3598/3465325303_2a5f83799f_z.jpg"
+    },
+    {
+      "file": "coco-352684.jpg",
+      "coco_id": 352684,
+      "scenario": "group",
+      "description": "Nine people in a lobby, some occluded",
+      "width": 424,
+      "height": 640,
+      "visible_persons": 9,
+      "persons_xywh": [
+        [
+          167.1,
+          223.2,
+          123.4,
+          412.6
+        ],
+        [
+          300.6,
+          240.2,
+          79.1,
+          286.2
+        ],
+        [
+          84.4,
+          252.0,
+          63.1,
+          235.0
+        ],
+        [
+          1.4,
+          271.4,
+          40.8,
+          141.4
+        ],
+        [
+          374.1,
+          282.8,
+          45.8,
+          144.7
+        ],
+        [
+          152.0,
+          250.5,
+          28.2,
+          213.0
+        ],
+        [
+          56.4,
+          268.7,
+          39.9,
+          147.1
+        ],
+        [
+          38.4,
+          271.5,
+          22.3,
+          107.2
+        ],
+        [
+          128.6,
+          265.2,
+          34.8,
+          155.3
+        ]
+      ],
+      "license": "Attribution-ShareAlike License",
+      "license_url": "http://creativecommons.org/licenses/by-sa/2.0/",
+      "flickr_url": "http://farm8.staticflickr.com/7150/6442776257_d51029651f_z.jpg"
+    },
+    {
+      "file": "coco-274460.jpg",
+      "coco_id": 274460,
+      "scenario": "crowd",
+      "description": "Beach group of thirteen",
+      "width": 640,
+      "height": 454,
+      "visible_persons": 13,
+      "persons_xywh": [
+        [
+          33.4,
+          290.1,
+          102.4,
+          120.0
+        ],
+        [
+          131.3,
+          290.7,
+          87.5,
+          117.3
+        ],
+        [
+          450.2,
+          281.0,
+          55.3,
+          95.2
+        ],
+        [
+          205.0,
+          179.8,
+          66.6,
+          150.1
+        ],
+        [
+          260.3,
+          169.6,
+          56.9,
+          156.9
+        ],
+        [
+          309.9,
+          188.2,
+          49.9,
+          131.2
+        ],
+        [
+          511.1,
+          212.3,
+          44.1,
+          105.8
+        ],
+        [
+          340.1,
+          271.8,
+          50.4,
+          106.5
+        ],
+        [
+          323.7,
+          249.8,
+          72.0,
+          102.4
+        ],
+        [
+          154.2,
+          174.5,
+          52.1,
+          140.3
+        ],
+        [
+          353.6,
+          190.3,
+          36.4,
+          90.7
+        ],
+        [
+          438.4,
+          184.6,
+          57.3,
+          147.9
+        ],
+        [
+          7.5,
+          197.2,
+          37.2,
+          94.3
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm7.staticflickr.com/6236/6267475434_0c28897158_z.jpg"
+    },
+    {
+      "file": "coco-441543.jpg",
+      "coco_id": 441543,
+      "scenario": "crowd",
+      "description": "Dense crowd under an umbrella, heavy occlusion",
+      "width": 640,
+      "height": 403,
+      "visible_persons": 13,
+      "persons_xywh": [
+        [
+          217.3,
+          283.5,
+          134.9,
+          115.0
+        ],
+        [
+          0.9,
+          218.9,
+          155.8,
+          178.4
+        ],
+        [
+          403.9,
+          351.4,
+          147.6,
+          46.2
+        ],
+        [
+          579.0,
+          251.7,
+          40.8,
+          131.3
+        ],
+        [
+          519.1,
+          343.4,
+          97.2,
+          58.3
+        ],
+        [
+          510.8,
+          239.6,
+          82.2,
+          119.1
+        ],
+        [
+          484.5,
+          235.4,
+          65.0,
+          100.4
+        ],
+        [
+          589.4,
+          236.3,
+          43.3,
+          84.1
+        ],
+        [
+          137.7,
+          269.9,
+          103.2,
+          128.6
+        ],
+        [
+          451.4,
+          296.1,
+          68.2,
+          73.6
+        ],
+        [
+          484.7,
+          231.1,
+          36.0,
+          39.5
+        ],
+        [
+          398.6,
+          244.5,
+          69.6,
+          138.8
+        ],
+        [
+          87.0,
+          237.8,
+          25.4,
+          24.1
+        ]
+      ],
+      "license": "Attribution-ShareAlike License",
+      "license_url": "http://creativecommons.org/licenses/by-sa/2.0/",
+      "flickr_url": "http://farm6.staticflickr.com/5461/9168165820_0a3b383210_z.jpg"
+    },
+    {
+      "file": "coco-532690.jpg",
+      "coco_id": 532690,
+      "scenario": "occlusion",
+      "description": "Partly visible people at the frame edges",
+      "width": 528,
+      "height": 640,
+      "visible_persons": 3,
+      "persons_xywh": [
+        [
+          59.0,
+          40.3,
+          441.5,
+          591.1
+        ],
+        [
+          373.9,
+          1.0,
+          152.4,
+          628.5
+        ],
+        [
+          120.8,
+          4.3,
+          268.9,
+          165.4
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm1.staticflickr.com/155/353485795_d364074053_z.jpg"
+    },
+    {
+      "file": "coco-392722.jpg",
+      "coco_id": 392722,
+      "scenario": "distant",
+      "description": "Small, distant people near a bus",
+      "width": 640,
+      "height": 423,
+      "visible_persons": 5,
+      "persons_xywh": [
+        [
+          456.1,
+          251.7,
+          29.6,
+          93.9
+        ],
+        [
+          533.8,
+          251.2,
+          41.0,
+          116.9
+        ],
+        [
+          318.7,
+          258.2,
+          21.6,
+          64.2
+        ],
+        [
+          580.8,
+          252.6,
+          44.7,
+          130.2
+        ],
+        [
+          279.8,
+          264.8,
+          9.6,
+          23.7
+        ],
+        [
+          510.9,
+          250.8,
+          14.8,
+          15.1
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm3.staticflickr.com/2829/9953419346_8bcbd5480f_z.jpg"
+    },
+    {
+      "file": "coco-23899.jpg",
+      "coco_id": 23899,
+      "scenario": "low-light",
+      "description": "Dark room lit by a projector",
+      "width": 640,
+      "height": 425,
+      "visible_persons": 3,
+      "persons_xywh": [
+        [
+          1.9,
+          32.5,
+          609.8,
+          386.8
+        ],
+        [
+          214.9,
+          145.2,
+          182.4,
+          200.6
+        ],
+        [
+          476.6,
+          107.9,
+          163.4,
+          239.7
+        ]
+      ],
+      "license": "Attribution-ShareAlike License",
+      "license_url": "http://creativecommons.org/licenses/by-sa/2.0/",
+      "flickr_url": "http://farm2.staticflickr.com/1419/4598390017_b554e5d29b_z.jpg"
+    },
+    {
+      "file": "coco-389109.jpg",
+      "coco_id": 389109,
+      "scenario": "low-light",
+      "description": "Night, outdoor restaurant",
+      "width": 427,
+      "height": 640,
+      "visible_persons": 6,
+      "persons_xywh": [
+        [
+          270.7,
+          168.9,
+          149.7,
+          160.6
+        ],
+        [
+          3.1,
+          140.8,
+          132.2,
+          195.2
+        ],
+        [
+          168.5,
+          195.9,
+          46.7,
+          63.7
+        ],
+        [
+          14.1,
+          175.9,
+          44.2,
+          92.5
+        ],
+        [
+          397.6,
+          196.1,
+          29.4,
+          79.2
+        ],
+        [
+          241.4,
+          206.3,
+          39.6,
+          59.0
+        ]
+      ],
+      "license": "Attribution-ShareAlike License",
+      "license_url": "http://creativecommons.org/licenses/by-sa/2.0/",
+      "flickr_url": "http://farm3.staticflickr.com/2755/4130351505_1e5188021f_z.jpg"
+    },
+    {
+      "file": "coco-538364.jpg",
+      "coco_id": 538364,
+      "scenario": "low-light",
+      "description": "Night street with pedestrians and a motorcycle",
+      "width": 640,
+      "height": 480,
+      "visible_persons": 5,
+      "persons_xywh": [
+        [
+          45.3,
+          122.3,
+          38.9,
+          145.8
+        ],
+        [
+          593.5,
+          120.9,
+          46.5,
+          218.1
+        ],
+        [
+          270.5,
+          127.4,
+          22.2,
+          52.5
+        ],
+        [
+          356.7,
+          123.9,
+          8.8,
+          14.2
+        ],
+        [
+          371.1,
+          127.6,
+          5.9,
+          10.7
+        ],
+        [
+          385.1,
+          130.7,
+          8.8,
+          9.6
+        ],
+        [
+          400.4,
+          128.4,
+          9.2,
+          8.7
+        ],
+        [
+          347.8,
+          127.9,
+          6.9,
+          9.4
+        ],
+        [
+          375.2,
+          140.8,
+          134.2,
+          241.3
+        ],
+        [
+          0.0,
+          111.8,
+          43.2,
+          160.7
+        ]
+      ],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm9.staticflickr.com/8042/7933423348_c30bd9bd4e_z.jpg"
+    },
+    {
+      "file": "coco-34873.jpg",
+      "coco_id": 34873,
+      "scenario": "negative",
+      "description": "Kitchen, no people",
+      "width": 640,
+      "height": 480,
+      "visible_persons": 0,
+      "persons_xywh": [],
+      "license": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "flickr_url": "http://farm3.staticflickr.com/2563/3822818427_389d99073f_z.jpg"
+    },
+    {
+      "file": "coco-23751.jpg",
+      "coco_id": 23751,
+      "scenario": "negative",
+      "description": "Statue of a person (look-alike), no people",
+      "width": 430,
+      "height": 640,
+      "visible_persons": 0,
+      "persons_xywh": [],
+      "license": "Attribution-ShareAlike License",
+      "license_url": "http://creativecommons.org/licenses/by-sa/2.0/",
+      "flickr_url": "http://farm5.staticflickr.com/4034/4523981523_5aaaaeba77_z.jpg"
+    },
+    {
+      "file": "coco-180296.jpg",
+      "coco_id": 180296,
+      "scenario": "negative",
+      "description": "Doll on a suitcase (look-alike), no people",
+      "width": 640,
+      "height": 360,
+      "visible_persons": 0,
+      "persons_xywh": [],
+      "license": "Attribution-ShareAlike License",
+      "license_url": "http://creativecommons.org/licenses/by-sa/2.0/",
+      "flickr_url": "http://farm6.staticflickr.com/5248/5299720368_138301a8cd_z.jpg"
+    }
+  ],
+  "manual_review": [
+    {
+      "file": "coco-96493.jpg",
+      "decision": "count_as_correct",
+      "reason": "The detection boxes the whole boy including his arm and blanket; COCO's box is cropped to his torso (IoU 0.45). A human judges it a correct detection, not a miss plus a false positive."
+    }
+  ]
+}

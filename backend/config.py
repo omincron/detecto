@@ -17,7 +17,7 @@ def _from_root(path: str) -> str:
     return str(resolved if resolved.is_absolute() else PROJECT_ROOT / resolved)
 
 
-MODEL_PATH = os.getenv("MODEL_PATH", "yolov8n.pt")
+MODEL_PATH = os.getenv("MODEL_PATH", "yolov8s.pt")  # n→s after M5 evaluation (accuracy target)
 CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.5"))
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 DB_PATH = _from_root(os.getenv("DB_PATH", "backend/detecto.db"))

@@ -15,7 +15,7 @@ Testing gate (end of every milestone), using the agents in `.claude/agents/`:
    goes to human review). It writes `test-plans/milestone-N-healer-report.md`.
 A milestone is done only when the suite passes and the human-review items are resolved.
 
-## Status: Milestone 4 complete — Frontend history view
+## Status: Milestone 5 complete — Evaluation (all core milestones done; bonus optional)
 
 ## Plan (milestones)
 
@@ -23,7 +23,7 @@ A milestone is done only when the suite passes and the human-review items are re
 2. **Storage** — SQLite schema, `/history`, `/reset` *(done)*
 3. **Frontend detection view** — upload + bounding box overlay *(done)*
 4. **Frontend history view** — table/chart + filters *(done)*
-5. **Evaluation** — run the 10 sample images, fill in README metrics table
+5. **Evaluation** — run the 10 sample images, fill in README metrics table *(done)*
 6. **Bonus (optional)** — webcam/alerts/heatmaps/etc.
 
 ## Log
@@ -514,6 +514,162 @@ Recharts). Lazy-loading `HistoryView` with `React.lazy` would split it.
 - Frontend, in `frontend/`: `npx vite --port 5173`.
 - A detached backend may still be running from this session (PID in the scratchpad's
   `uv.pid`).
+
+### 2026-10-02 — Milestone 5: evaluation (done)
+
+**Sample set:** 16 images from COCO 2017 *val* (the model was trained on COCO *train*,
+so these are unseen), stored in `backend/samples/coco-<id>.jpg`.
+- Only CC BY / CC BY-SA licences, so they're safe to commit and to show with overlays.
+- Scenarios: single, small group, group, crowd, occlusion, distant, low light, and
+  negatives (a kitchen, a statue and a doll as person look-alikes).
+- `backend/samples/ground_truth.json` holds COCO's person boxes, the licence and Flickr
+  URL per image, and the "visible" rule (box ≥ 20 px tall; smaller people are ignored).
+- 69 visible persons in total.
+- Dropped candidates: 8021 (a projected presenter is ambiguous) and 566524 (people only
+  a few px tall).
+- The 241 MB COCO annotation zip and the candidates live in the scratchpad only, not in
+  the repo.
+
+**Evaluation script:** `backend/scripts/evaluate.py`
+(`python -m backend.scripts.evaluate`).
+- It runs each image through the real `/detect` route with TestClient, the real model,
+  warm-up and a temp DB, 3 runs per image.
+- Matching: greedy IoU ≥ 0.5. Output goes to `backend/samples/results.json`.
+- Options: `--threshold`, `--model`, `--out`.
+
+**Official run (YOLOv8n, threshold 0.5):**
+
+| Metric | Result | Target |
+|---|---|---|
+| Accuracy | 52/69 = 75.4% | ≥ 85% |
+| False positives | 3/55 = 5.5% | ≤ 10% |
+| Inference | 70 ms | ≤ 1.5 s |
+| Average confidence | 0.772 | ≥ 0.7 |
+| Reliability | 16/16 = 100% | 100% |
+
+**Visual review of the errors:**
+- **96493:** the detection covers the boy plus his blanket, but COCO's box is tight, so
+  IoU is 0.45. A human would call it correct, which makes manual accuracy 53/69 = 76.8%
+  and false positives 2/55.
+- **180296:** the doll is detected as a person (0.55): a real false positive.
+- **274460:** one box merges two crouching people.
+- **441543:** a dense umbrella crowd, 8 of 13 missed.
+- **389109 / 23899:** people missed in the dark.
+
+**Comparison (exploratory: tuned on the same 16 images, so optimistic):**
+
+| Setting | Accuracy | False positives | Inference | Confidence |
+|---|---|---|---|---|
+| v8n @0.25 | 85.5% | 20.3% | 66 ms | 0.728 |
+| v8n @0.35 | 82.6% | 17.4% | 67 ms | 0.743 |
+| **v8s @0.5** | **85.5%** | **9.2%** | **154 ms** | **0.793** |
+| v8s @0.35 | 89.9% | 13.9% | 155 ms | 0.773 |
+
+`yolov8s.pt` was downloaded to the project root by ultralytics (gitignored, like
+`*.pt`).
+
+**RESUME CHECKLIST:**
+1. [x] **User chose YOLOv8s @0.5.** `.env` and the `config.py` default now use
+   `yolov8s.pt`. The official re-run gives 85.5% accuracy (59/69), 9.2% false positives
+   (6/65), 152 ms, 0.793 confidence and 100% reliability. Manual review gives 87.0%
+   (60/69) and 7.7% (5/65). The statue (0.79) is now also a false positive.
+   `results.json` is updated. (Original note follows.) Keep YOLOv8n (report 75% honestly as below target)
+   or switch the default model to YOLOv8s @0.5, which meets all targets on this set at
+   about 2× the time and is still far under 1.5 s. PROGRESS.md M1 said: "can swap to a
+   larger variant later if accuracy testing shows it's needed". If switching: change
+   `MODEL_PATH` in `.env` and the `config.py` default, update docs, and re-run the
+   official evaluation (`--out results.json`).
+2. [x] **Done:** the 16 COCO images are in `frontend/public/samples/` with a scenario-label
+   `index.json`. `bus.jpg`/`zidane.jpg` were removed (user approved). `CREDITS.md` is in
+   both samples folders. The frontend has 230/230 tests passing.
+   **One backend test now fails:** `test_logging.py::test_uvicorn_prints_detection_info_line`
+   loaded `frontend/public/samples/zidane.jpg`. That's a test-fixture issue for the M5
+   healer: use ultralytics `ASSETS` or a `backend/samples` image.
+   (Original note follows.) **Frontend samples:** copy the 16 COCO images to `frontend/public/samples/` and
+   rewrite `index.json` with scenario labels. Decide on `bus.jpg`/`zidane.jpg`: they
+   come from ultralytics' AGPL repo and zidane is a press photo, so their licence is
+   unclear. Recommend replacing them with COCO images; frontend tests mock the manifest.
+3. [x] **README.md written**, with the screenshot links pointing to `docs/screenshots/{detect-beach,history,detect-night}.jpg`. (Original note follows.) **README.md** (instructions.md "Code Quality" and "Testing & Validation"):
+   - purpose, architecture, setup and run for both apps, testing methodology;
+   - the metrics table with actual numbers (strict and manual review), per-image results
+     and failure cases (occlusion, low light, look-alikes);
+   - what worked, what could improve, known limitations (no auth on `/reset`,
+     `VITE_MAX_UPLOAD_MB` must match `MAX_UPLOAD_BYTES`, the Kolkata alias, the bundle
+     size), and image credits and licences.
+4. [x] **Screenshots done:** `docs/screenshots/detect-beach.jpg`, `detect-night.jpg` and
+   `history.jpg` (1568×730, taken through Chrome).
+   - **UI fix found while capturing:** 16 sample chips wrapped onto two lines and pushed
+     the image card below the fold. `ImageUploader` now shows chips for 4 or fewer
+     samples and a searchable `Select` for more.
+   - **Keyboard bug found and fixed:** typing a name and pressing Enter did nothing. It
+     now uses `selectFirstOptionOnChange` and `onOptionSubmit`.
+   - The frontend still passes 230/230, but **the new Select path has no tests yet**;
+     add them in the M5 gate.
+5. [ ] **M5 testing gate, in progress:**
+   - [x] Planner wrote `test-plans/milestone-5.md` (63 cases).
+   - [x] The user approved all of OQ-1..9 (see the plan's "Resolved decisions"), and also
+     approved updating `.claude/agents/test-planner.md` to YOLOv8s. The zip on the
+     Desktop stays untouched.
+   - [x] Docs and data done before generation:
+     - OQ-1/2: README false-positive wording;
+     - OQ-4: YOLOv8n references updated; ARCHITECTURE §2/§3.5/§7, the evaluate
+       docstring, pytest.ini, the test_integration docstring and the agent file;
+     - OQ-5: `compare-yolov8n.pt-0.5.json` re-run (75.4% / 5.5% / 0.772 / 62 ms) and the
+       README row updated, with a data-files note.
+   - [x] `test-generator` wrote the M5 tests (backend 283, frontend 244).
+   - [x] App changes done: OQ-3 (search text cleared on pick), OQ-6 (`manual_review` in
+     `ground_truth.json`; `run()` and `_summarize()` compute it), OQ-8 ("n/a") and OQ-9
+     (`TemporaryDirectory`). `results.json`'s summary was recomputed from its saved
+     per-image results, so detections and timings are unchanged and it now has
+     `manual_review`: 60/69 and 5/65.
+     - Result: frontend 244/244, backend 280/283.
+   - [x] `test-healer`: M5-score-05/06 were test bugs (the plan's 10 px geometry; now
+     ×10 with the same IoU values; the plan has a note), and `test_logging` now uses
+     ultralytics `ASSETS/zidane.jpg`. M5-int-01 passed 18/18 runs and its determinism
+     was verified, so nothing changed. Report: `test-plans/milestone-5-healer-report.md`.
+     - Full runs: backend 283/283, frontend 244/244, build OK.
+     - README notes the near-boundary detections (confidence 0.502, IoU 0.512).
+     - 86 leftover `/tmp/tmp*/eval.db` dirs from pre-OQ-9 runs were removed.
+   - [ ] **NEXT, needs the user:**
+     - (a) ✅ **The user confirmed both manual-review calls** (2026-10-02): 96493 counts as
+       correct, and 274460's background person stays a false positive. Original note:
+       96493 is counted as correct, and 274460's background person stays a false
+       positive.
+     - (b) ✅ **Done:** live check of the sample Select on a sandbox (backend :8001 with a
+       temp `DB_PATH`, Vite :5174), Chrome in front.
+       - It's a combobox named "Try a sample image", and the upload bar is one line (79 px).
+       - Typing "night" highlights the first match; Enter loads "Night dinner" (5 people)
+         and the field is "" immediately, with focus kept.
+       - At 360 px there's no horizontal scroll, and the Select and button stack inside
+         the bar.
+       - Isolation: the sandbox got 1 record and the user's :8000 history stayed at 38.
+         The sandbox is stopped and its files removed.
+     - ✅ M5 marked done. The user approved the commit.
+   - Original healer step: The 3 remaining failures:
+     - M5-score-05/06: a plan bug, the 10 px ground truth is under the 20 px visible rule;
+     - the `test_logging` `zidane.jpg` fixture.
+
+     Also check M5-int-01: it failed once in the generator's `-m integration` run but
+     passes alone now, so it may be flaky.
+   - Original list of the app changes:
+     - **OQ-3** `ImageUploader` Select: clear the search text on option submit (controlled
+       `searchValue`).
+     - **OQ-6** `ground_truth.json` gets `"manual_review": [{file: "coco-96493.jpg",
+       decision: "count_as_correct", reason}]`. `evaluate.run()` adds
+       `summary.manual_review` with correct, false_positives, both percentages and
+       applied; it raises `ValueError` if an entry's image lacks a false positive or a
+       miss. Then re-run the evaluation so `results.json` holds it (60/69, 5/65).
+     - **OQ-8** `markdown()` prints "n/a" for `None` metrics.
+     - **OQ-9** `run()` uses a self-cleaning temp dir for its DB.
+   - The healer must also fix `test_logging.py`, which uses the removed `zidane.jpg`;
+     use ultralytics `ASSETS/zidane.jpg` instead.
+   The healer must also fix `test_logging.py`'s missing `zidane.jpg` fixture.
+   (Superseded text of steps 4 and 5 follows.)
+4. [ ] capture the 3 screenshots (the Chrome window must be in front; the backend was restarted detached with YOLOv8s, PID in the scratchpad's `uv.pid`). (Original note follows.) **2–3 screenshots** of successful detections in `docs/screenshots/`, taken through
+   Chrome with the window in front. Use the evaluation images (licensed).
+5. [ ] **Testing gate** for M5: planner (eval script, sample manifest, README claims
+   match `results.json`), generator, healer.
+6. [ ] Commit (ask the user first).
 
 ## Open decisions for later milestones
 

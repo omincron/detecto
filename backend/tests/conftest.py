@@ -1,5 +1,6 @@
 """Shared fixtures: app client, fake detector, per-test DB path."""
 
+import importlib
 from pathlib import Path
 
 import numpy as np
@@ -53,6 +54,18 @@ def isolated_config(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DB_PATH", str(tmp_path / "test.db"))
     yield
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def env(monkeypatch):
+    """MonkeyPatch for env vars; config is reloaded with the original env afterwards."""
+    # reload() keeps attributes the module no longer defines, so drop values
+    # set by other fixtures (restored by monkeypatch on teardown).
+    monkeypatch.delattr(config, "WARMUP_MODEL", raising=False)
+    monkeypatch.delattr(config, "MAX_UPLOAD_BYTES", raising=False)
+    with pytest.MonkeyPatch.context() as mp:
+        yield mp
+    importlib.reload(config)
 
 
 @pytest.fixture
