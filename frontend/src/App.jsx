@@ -7,8 +7,8 @@ import DetectionView from "./pages/DetectionView.jsx";
 import HistoryView from "./pages/HistoryView.jsx";
 
 const PAGES = {
-  detect: { label: "Detect", Icon: IconScan, Component: DetectionView },
-  history: { label: "History", Icon: IconChartLine, Component: HistoryView },
+  detect: { label: "Detect", Icon: IconScan },
+  history: { label: "History", Icon: IconChartLine },
 };
 
 // Two pages don't justify a router dependency; plain state is enough. If deep links
@@ -16,7 +16,6 @@ const PAGES = {
 export default function App() {
   const [page, setPage] = useState("detect");
   const [navOpen, { toggle: toggleNav, close: closeNav }] = useDisclosure(false);
-  const { Component } = PAGES[page];
 
   return (
     <AppShell
@@ -88,7 +87,13 @@ export default function App() {
       </AppShell.Navbar>
 
       <AppShell.Main bg="var(--detecto-ground)">
-        <Component />
+        {/* Detect stays mounted (just hidden) so its result — or a detection still in
+            flight — survives a visit to History. History mounts per visit, so it
+            always shows fresh data. */}
+        <div hidden={page !== "detect"}>
+          <DetectionView />
+        </div>
+        {page === "history" && <HistoryView onNavigate={setPage} />}
       </AppShell.Main>
     </AppShell>
   );

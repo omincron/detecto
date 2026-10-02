@@ -15,14 +15,14 @@ Testing gate (end of every milestone), using the agents in `.claude/agents/`:
    goes to human review). It writes `test-plans/milestone-N-healer-report.md`.
 A milestone is done only when the suite passes and the human-review items are resolved.
 
-## Status: Milestone 3 complete — Frontend detection view
+## Status: Milestone 4 complete — Frontend history view
 
 ## Plan (milestones)
 
 1. **Backend skeleton** — FastAPI app, YOLOv8 model loading, `/detect` on a single image *(done)*
 2. **Storage** — SQLite schema, `/history`, `/reset` *(done)*
 3. **Frontend detection view** — upload + bounding box overlay *(done)*
-4. **Frontend history view** — table/chart + filters
+4. **Frontend history view** — table/chart + filters *(done)*
 5. **Evaluation** — run the 10 sample images, fill in README metrics table
 6. **Bonus (optional)** — webcam/alerts/heatmaps/etc.
 
@@ -377,6 +377,144 @@ Built:
 - **Lesson:** the M3 check confirmed the 75vh cap was applied, not that the whole card
   fit on screen. Manual check 14 in the 3b plan now measures the full layout.
 
+### 2026-10-02 — Milestone 4: frontend history view
+
+Built:
+- **Dependencies:** `@mantine/dates` (+ dayjs) for the date-time pickers, and `recharts`
+  for the chart.
+- **`api/client.js`:** `getHistory(params)` (camelCase records, `timestamp` as a `Date`)
+  and `clearHistory()`.
+- **`utils/history.js`:** `toApiInstant` (local picker value to UTC instant),
+  `buildHistoryParams`, `validateRange`, `summarize` (KPIs), `formatTimestamp` and
+  `localTimeZone`.
+- **Components:**
+  - `FilterBar`: From/To `DateTimePicker`s and a confidence `Slider`, with Apply, Reset
+    and inline range validation.
+  - `HistoryStats`: KPI `dl`.
+  - `HistoryChart`: Recharts time axis plus a text summary for screen readers.
+  - `HistoryTable`: newest first, paginated.
+  - `ClearHistoryButton`: the agreed scoped confirmation, with the unfiltered count.
+- **Pages:** `HistoryView` with loading, error and empty states (plus "Go to Detect").
+  `App` passes `onNavigate` to pages.
+
+**Live check (Claude in Chrome, real backend with 33 records):**
+- KPIs show 33 / 4.4 / 36 / 121 ms.
+- The chart has 33 points on a time axis.
+- The table has 15 rows on page 1 of 3.
+- The time zone is named (Europe/Athens).
+- The slider at 85% sends `?min_confidence=0.85` and shows the 1 matching record.
+- The clear dialog fetched the unfiltered total. Its rendering couldn't be checked
+  because the Chrome tab was hidden; the dialog was cancelled and nothing was deleted.
+- **Bug found and fixed while checking:** the confidence slider's focusable thumb had no
+  accessible name, because `aria-labelledby` landed on Mantine's wrapper. It now uses
+  `thumbLabel`.
+
+**Root cause of the recurring browser-tool timeouts:** the Chrome window is hidden
+(`visibilityState: "hidden"`). Chrome throttles timers and skips animation frames there,
+so screenshots time out and Mantine's transitions (the Modal) never run. Visual checks
+need the Chrome window visible.
+
+**Known test impact:** 5 shell tests (M3-app-02, M3b-shell-02..05) open the History tab
+and expect the old placeholder and no `/history` call. M4 changes that on purpose, so
+these go to the healer at the gate.
+
+**Testing gate — status and RESUME CHECKLIST (written 2026-10-02, mid-gate):**
+
+Done:
+- [x] `test-planner` wrote `test-plans/milestone-4.md` (59 cases, 13 manual checks).
+- [x] The user resolved all open questions. See the plan's "Resolved decisions" and
+  "Cases added by the resolutions". Summary: OQ-1 keep Detect mounted, OQ-2 inclusive
+  "To", OQ-3 reset filters after clear, OQ-4 pagination names, OQ-5 singular wording,
+  OQ-7 trim timestamps, OQ-10 dots-only chart. OQ-6 and OQ-8 are accepted as is.
+- [x] OQ-9 docs: ARCHITECTURE.md §2 file tree updated, and the charting library is
+  recorded as Recharts.
+- [x] Visual check in Chrome (window in front): the Detect page matches the mockup. On
+  History, the pickers send local time as UTC (18:30 Athens → `…T15:30:00.000Z`), and
+  the dialog said "Delete all 34 records" with 24 filtered. It was cancelled; no DELETE.
+
+In progress when this was written:
+- [x] `test-generator` wrote the M4 tests: 230 frontend and 171 backend. The first run had
+  215/230 frontend (9 agreed-change failures, the 5 shell tests, and 1 ICU alias quirk
+  for M4-fmt-02) and 171/171 backend.
+- [x] **Step 1 done:** all 7 app changes, plus a fix found by the generator: the modal's
+  close button now has `aria-label="Close"`. All 9 agreed-change tests pass.
+- Note: the original "if the session ended before it reported" fallback is kept below
+  for reference. **If the session ended before it reported:**
+  run `npm test` in `frontend/` and `backend/.venv/bin/python -m pytest` from the root.
+  Check `git status` for new `*.test.js(x)` files and whether every plan case (including
+  "Cases added by the resolutions") has a test. Re-run `test-generator` with the plan if
+  coverage is incomplete.
+  - Expected after generation: the OQ-1/2/3/4/5/7/10 tests fail (app not changed yet),
+    the 5 shell tests below still fail, and everything else passes.
+
+Still to do, in this order:
+1. **App changes** (each has failing tests that pin it):
+   - **OQ-1** `App.jsx`: keep `DetectionView` mounted while History is shown, hidden
+     (`hidden` attribute / `display:none`, so it's out of the a11y tree). Mount
+     `HistoryView` only when active, so it refreshes per visit. An in-flight detection
+     must survive the switch.
+   - **OQ-2** `FilterBar.jsx`: when a *day* is picked in "To" (value time 00:00, date
+     changed), set it to that day at 23:59:00. Time-only edits keep their time.
+     `utils/history.js`: `buildHistoryParams` and `validateRange` treat "To" as
+     inclusive of its minute, so `end_date` = `toApiInstant(to)` + 60 s. Update the
+     ARCHITECTURE.md §4.1 Filters bullet.
+   - **OQ-3** `HistoryView.jsx`: on a successful clear, reset the draft and applied
+     filters, reload unfiltered, and show "Deleted N records." plus "No detections yet."
+   - **OQ-4** `HistoryTable.jsx`: name the pagination's previous and next controls
+     "Previous page" and "Next page" (Mantine `Pagination` `getControlProps`).
+   - **OQ-5** singular wording: the dialog says "This deletes the only record in the
+     history." and the button "Delete 1 record"; the chart summary says "1 detection";
+     the notice says "Deleted 1 record." (already singular).
+   - **OQ-7** `api/client.js` `getHistory`: trim fractional seconds to 3 digits before
+     `new Date(...)`.
+   - **OQ-10** `HistoryChart.jsx`: dots only, no connecting line (e.g. a Recharts
+     `Scatter`, or `Line` with `stroke="none"`). Keep the time axis and the a11y summary.
+2. ✅ **Done:** `test-healer` (re-run) fixed all 11 as test bugs: 5 outdated by M4, 5 by
+   OQ-2, and M4-fmt-02 (accepts either Kolkata alias). No app changes, and nothing
+   needed human review. Report: `test-plans/milestone-4-healer-report.md`. Docs updated
+   (ARCHITECTURE.md §4.1 and §4.3 for OQ-1/2/3/5/10), and the plan has a note on its
+   pre-OQ-2 case bodies.
+3. ✅ **Done:** frontend 230/230, backend 171/171, and the build passes.
+   (Superseded text of step 2 follows.) **Run `test-healer`** (it was the NEXT STEP; the first run was cut off by the usage limit before it
+   changed anything, so it was re-run from scratch. If no `test-plans/milestone-4-healer-report.md`
+   exists, it didn't finish: re-run it). 11 frontend tests fail: the 5 shell tests, 5 M4
+   cases written before the OQ-2 resolution (M4-params-02, M4-range-01, M4-tz-03,
+   M4-filter-05, M4-view-05; "To" is now inclusive of its minute, and From == To is now
+   valid), and M4-fmt-02 (Node/ICU reports "Asia/Calcutta" for "Asia/Kolkata"). Original
+   note: expected are only the 5 shell tests
+   M3-app-02 and M3b-shell-02..05, which the plan's Regression section classifies as
+   outdated by M4. With OQ-1, "no dropzone on History" becomes "dropzone not visible".
+   Show any "needs human review" items to the user.
+3. **Full runs:** `npm test`, `npx vite build` and backend pytest, all green.
+4. ✅ **Done (live, Chrome in front, read-only against :8000):**
+   - **OQ-1:** the Detect result (count 2, both boxes) survives Detect → History →
+     Detect, and History unmounts when left.
+   - **OQ-10:** the chart draws dots only, and History shows fresh data (the new 10:42 PM
+     record).
+   - **OQ-2:** picking Oct 1 in "To" snaps to "Oct 1, 2026 23:59", and Apply sends
+     `end_date=2026-10-01T21:00:00.000Z` (Athens midnight at the end of Oct 1), giving
+     the filtered empty state. "Reset filters" restores everything.
+   - **OQ-4:** pagination names "Previous page", 1–3, "Next page".
+   - **Dialog:** "Delete all 35 records" with the scope lines, and the × is named
+     "Close". Escape dismissed it, with no `/reset`.
+   - **Not run live (unit-tested only):** confirming a delete (needs a sandbox
+     backend), singular wording (needs exactly 1 record), the Firefox/Safari timestamp
+     check, and contrast.
+   (Original text of step 4 follows.) **Manual checks** from the plan, with the Chrome window in front (check
+   `document.visibilityState === "visible"`). Never confirm a delete against :8000;
+   the user's records live there. Delete-confirm checks use a sandbox backend on another
+   port with a temp `DB_PATH`.
+5. ✅ Entry updated and M4 marked done. **Remaining: commit (ask the user first).**
+
+Optional, noted: `vite build` warns that the JS bundle is over 500 kB (Mantine, dates,
+Recharts). Lazy-loading `HistoryView` with `React.lazy` would split it.
+
+**Dev servers** (if not running):
+- Backend, from the root: `backend/.venv/bin/python -m uvicorn backend.main:app --port 8000`.
+- Frontend, in `frontend/`: `npx vite --port 5173`.
+- A detached backend may still be running from this session (PID in the scratchpad's
+  `uv.pid`).
+
 ## Open decisions for later milestones
 
 - **Design direction (agreed 2026-10-02):** Mantine, light mode only, a neutral base
@@ -401,4 +539,5 @@ Built:
 
 - Whether to persist bounding boxes in history (currently: no, only summary stats —
   see ARCHITECTURE.md §3.4). Revisit if History view ever needs per-box replay.
-- Frontend charting library for History view (not yet chosen).
+- ~~Frontend charting library for History view (not yet chosen).~~ Chosen in M4:
+  Recharts used directly, for a true time axis.

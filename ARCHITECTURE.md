@@ -33,43 +33,55 @@ keeps both sides independently testable, per the project requirements.
 detecto/
 ├── frontend/
 │   ├── public/
-│   │   └── samples/            # ≥10 demo images for manual testing
+│   │   └── samples/            # demo images + index.json manifest (≥10 by M5)
 │   ├── src/
 │   │   ├── api/
-│   │   │   └── client.js       # fetch wrappers for /detect, /history, /reset
+│   │   │   └── client.js       # the only module that knows the backend: /detect,
+│   │   │                       #   /history, /reset, /health; ApiError messages
 │   │   ├── components/
-│   │   │   ├── ImageUploader.jsx
-│   │   │   ├── BoundingBoxOverlay.jsx
-│   │   │   ├── DetectionSummary.jsx
-│   │   │   ├── HistoryTable.jsx
-│   │   │   ├── HistoryChart.jsx
-│   │   │   └── FilterBar.jsx
+│   │   │   ├── ImageUploader.jsx       # picker, drag-and-drop, samples
+│   │   │   ├── BoundingBoxOverlay.jsx  # percent-positioned boxes over the image
+│   │   │   ├── DetectionSummary.jsx    # stat cards (dl) + detections list
+│   │   │   ├── BackendStatus.jsx       # sidebar /health card
+│   │   │   ├── FilterBar.jsx           # History: From/To pickers, confidence slider
+│   │   │   ├── HistoryStats.jsx        # History: KPI cards (dl)
+│   │   │   ├── HistoryChart.jsx        # History: people vs. time (Recharts)
+│   │   │   ├── HistoryTable.jsx        # History: records, newest first, paginated
+│   │   │   └── ClearHistoryButton.jsx  # scoped "Delete all N records" confirmation
 │   │   ├── pages/
 │   │   │   ├── DetectionView.jsx
 │   │   │   └── HistoryView.jsx
-│   │   ├── App.jsx
+│   │   ├── utils/
+│   │   │   ├── bbox.js           # box → percent math, formatters
+│   │   │   ├── validateUpload.js # browser-side upload pre-check
+│   │   │   └── history.js        # local time → UTC params, KPIs, time formatting
+│   │   ├── test/                 # Vitest setup (Mantine provider, polyfills) + helpers
+│   │   ├── config.js             # VITE_MAX_UPLOAD_MB
+│   │   ├── theme.js              # Mantine theme (neutral + pastels, IBM Plex)
+│   │   ├── App.jsx               # AppShell, page switching by state
 │   │   └── main.jsx
-│   ├── .env                    # VITE_API_BASE_URL
-│   └── package.json
+│   ├── .env                    # VITE_API_BASE_URL, VITE_MAX_UPLOAD_MB
+│   └── package.json            # tests colocated as *.test.js(x); run `npm test`
 │
 ├── backend/
-│   ├── main.py                 # FastAPI app, CORS, router registration
+│   ├── main.py                 # FastAPI app, CORS, lifespan warm-up, /health, 400 handler
+│   ├── config.py               # env settings (DB_PATH resolved from project root)
 │   ├── routes/
 │   │   ├── detect.py           # POST /detect
 │   │   └── history.py          # GET /history, DELETE /reset
 │   ├── models/
-│   │   └── record.py           # Pydantic + SQLite schema for a Detection record
+│   │   └── record.py           # Pydantic schemas + the SQLite table definition
 │   ├── services/
 │   │   ├── detector.py         # loads YOLO model once, runs inference
 │   │   └── storage.py          # read/write to SQLite
 │   ├── utils/
-│   │   └── preprocessing.py    # resize, normalize, decode image bytes
-│   ├── samples/                # backend-side copies for CLI/test scripts
-│   └── tests/
-│       ├── test_detect.py
-│       └── test_history.py
+│   │   └── preprocessing.py    # decode, sniff format, resize, CLAHE, encode
+│   ├── samples/                # backend-side copies for CLI/test scripts (M5)
+│   └── tests/                  # pytest suite (`integration` marker = real model)
 │
-├── requirements.txt
+├── test-plans/                 # per-milestone test plans + healer reports
+├── requirements.txt / requirements-dev.txt
+├── pytest.ini
 ├── README.md
 └── .env                        # MODEL_PATH, CONFIDENCE_THRESHOLD, DB_PATH, etc.
 ```
@@ -213,9 +225,34 @@ WARMUP_MODEL=true
     backend stays the authoritative validator (magic bytes, decoding, its own
     `MAX_UPLOAD_BYTES`). `VITE_MAX_UPLOAD_MB` must equal `MAX_UPLOAD_BYTES`, and a test
     checks that the two match.
-- **HistoryView** — on mount, call `/history`; render `HistoryTable` and
-  `HistoryChart` (timestamp vs. count); `FilterBar` re-queries `/history` with
-  date/time/confidence params.
+- **HistoryView** — on mount, call `/history`; render `HistoryStats` (KPI `dl`),
+  `HistoryChart` (people vs. time) and `HistoryTable` (newest first, 15 per page).
+  - **Filters (`FilterBar`):** From/To date-times and a minimum-confidence slider. They
+    are a draft until Apply, and Reset clears them and re-queries.
+    - **"To" is inclusive of its minute** (pickers have no seconds): the exclusive
+      `end_date` sent is To + 60 s (`toApiEnd`).
+    - Picking a *day* in "To" snaps it to 23:59, so "To Oct 2" covers all of Oct 2;
+      editing the time keeps it.
+    - From == To is a valid one-minute range.
+  - **Time zones:** the pickers yield local wall-clock time, which
+    `utils/history.js → toApiInstant` converts to an absolute UTC instant (`…Z`) before
+    sending. The backend treats bare or naive values as UTC, so a bare value would
+    shift the range by the user's offset (M2 OQ-3). Times are displayed in the user's
+    local time zone, which the page names.
+  - **Confidence:** the slider goes from 0 to 100 in steps of 5. 0 means no filter, and
+    frames with nobody present are always kept (backend rule).
+  - **Chart:** Recharts with a numeric time axis (`scale="time"`), so irregular
+    detections are spaced by real time. It draws **dots only, with no connecting line**:
+    detections are isolated snapshots, and a line would imply the count changed
+    steadily between them. A text summary (`role="img"` + `aria-label`)
+    carries the same information for screen readers.
+  - **Clear history:** a confirmation dialog fetches the unfiltered total and says
+    "Delete all N records" ("Delete 1 record" for one), that it ignores the current
+    filters and that it can't be undone. Then `DELETE /reset`, a success notice, a
+    reset of the filters, and an unfiltered reload ("No detections yet.").
+  - **States:** loading, error (the backend's `detail`), "No detections yet" (with
+    *Go to Detect*), and "No detections match these filters" (with *Reset filters*).
+    Latest-request-wins applies to queries.
 
 ### 4.2 Key component: `BoundingBoxOverlay`
 
@@ -244,6 +281,9 @@ downscaled frame), not the uploaded file's own size.
   `ApiError` whose message can be shown as-is: the backend's `detail`, or a "can't reach
   the server" message.
 - Navigation between the two pages is plain component state, with no router dependency.
+  - `DetectionView` stays mounted (hidden) while History is shown, so a result, or a
+    detection still in flight, survives the visit.
+  - `HistoryView` mounts on each visit, so it always shows fresh data.
 - UI kit: Mantine, with the theme in `src/theme.js` (neutral base, pastel palettes,
   IBM Plex fonts bundled through @fontsource, light mode only). The app shell is a Mantine
   `AppShell`: a sidebar with the "Pages" navigation and a `BackendStatus` card

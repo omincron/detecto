@@ -41,19 +41,23 @@ describe("App", () => {
     const nav = screen.getByRole("navigation", { name: "Pages" });
 
     await user.click(within(nav).getByRole("button", { name: "History" }));
-    expect(
-      screen.getByText("Detection history is coming in the next milestone."),
-    ).toBeInTheDocument();
-    expect(screen.queryByTestId("dropzone")).toBeNull();
+    await act(flush);
+    // M4 replaced the placeholder with the real page (milestone-4.md Regression).
+    expect(screen.getByRole("heading", { level: 2 })).toHaveAccessibleName("Detection history");
+    expect(screen.getByText("No detections yet.")).toBeInTheDocument();
+    // OQ-1: Detect stays mounted while History is shown, but hidden.
+    expect(screen.getByTestId("dropzone")).not.toBeVisible();
     expect(within(nav).getByRole("button", { name: "History" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("/history"))).toHaveLength(0);
+    // M4: one visit to History makes exactly one /history call.
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("/history"))).toHaveLength(1);
     expect(window.location.href).toBe(href);
 
     await user.click(within(nav).getByRole("button", { name: "Detect" }));
-    expect(screen.getByTestId("dropzone")).toBeInTheDocument();
+    expect(screen.getByTestId("dropzone")).toBeVisible();
+    expect(screen.queryByText("No detections yet.")).toBeNull();
     expect(window.location.href).toBe(href);
   });
 });

@@ -74,7 +74,7 @@ describe("App shell", () => {
   });
 
   it("M3b-shell-02: exactly one nav item has aria-current, following the page", async () => {
-    mockFetch();
+    const fetchMock = mockFetch();
     const user = userEvent.setup();
     const { container } = render(<App />);
     await act(flush);
@@ -84,18 +84,25 @@ describe("App shell", () => {
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
 
     await user.click(navButton("History"));
+    await act(flush);
     expect(navButton("History")).toHaveAttribute("aria-current", "page");
     expect(navButton("Detect")).not.toHaveAttribute("aria-current");
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     const main = screen.getByRole("main");
     expect(within(main).getByRole("heading", { level: 2 })).toHaveAccessibleName("Detection history");
-    expect(screen.getByText("Detection history is coming in the next milestone.")).toBeInTheDocument();
-    expect(screen.queryByTestId("dropzone")).toBeNull();
+    // M4 replaced the placeholder with the real page (milestone-4.md Regression).
+    expect(screen.getByText("No detections yet.")).toBeInTheDocument();
+    // OQ-1: Detect stays mounted while History is shown, but hidden.
+    expect(screen.getByTestId("dropzone")).not.toBeVisible();
+    expect(callsTo(fetchMock, "/history")).toHaveLength(1);
 
     await user.click(navButton("History"));
+    await act(flush);
     expect(navButton("History")).toHaveAttribute("aria-current", "page");
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
-    expect(screen.getByText("Detection history is coming in the next milestone.")).toBeInTheDocument();
+    expect(screen.getByText("No detections yet.")).toBeInTheDocument();
+    // Clicking the current page again keeps it: no remount, no new /history call.
+    expect(callsTo(fetchMock, "/history")).toHaveLength(1);
   });
 
   it("M3b-shell-03: navigation works from the keyboard alone", async () => {
@@ -110,7 +117,10 @@ describe("App shell", () => {
     expect(document.activeElement).toBe(navButton("History"));
 
     await user.keyboard("{Enter}");
-    expect(screen.getByText("Detection history is coming in the next milestone.")).toBeInTheDocument();
+    await act(flush);
+    // M4 replaced the placeholder with the real page (milestone-4.md Regression).
+    expect(screen.getByRole("heading", { level: 2 })).toHaveAccessibleName("Detection history");
+    expect(screen.getByText("No detections yet.")).toBeInTheDocument();
     expect(navButton("History")).toHaveAttribute("aria-current", "page");
 
     for (let i = 0; i < 10 && document.activeElement !== navButton("Detect"); i++) {
@@ -118,7 +128,7 @@ describe("App shell", () => {
     }
     expect(document.activeElement).toBe(navButton("Detect"));
     await user.keyboard(" ");
-    expect(screen.getByTestId("dropzone")).toBeInTheDocument();
+    expect(screen.getByTestId("dropzone")).toBeVisible();
     expect(navButton("Detect")).toHaveAttribute("aria-current", "page");
   });
 
@@ -145,7 +155,10 @@ describe("App shell", () => {
 
     await user.click(navButton("History"));
     expect(burger()).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText("Detection history is coming in the next milestone.")).toBeInTheDocument();
+    await act(flush);
+    // M4 replaced the placeholder with the real page (milestone-4.md Regression).
+    expect(screen.getByRole("heading", { level: 2 })).toHaveAccessibleName("Detection history");
+    expect(screen.getByText("No detections yet.")).toBeInTheDocument();
   });
 
   it("M3b-shell-05: switching pages neither remounts the status card nor re-checks", async () => {
@@ -166,6 +179,8 @@ describe("App shell", () => {
 
     expect(callsTo(fetchMock, "/health")).toHaveLength(1);
     expect(screen.getByTestId("backend-status")).toHaveTextContent("Backend online");
-    expect(callsTo(fetchMock, "/history")).toHaveLength(0);
+    // M4: History mounts per visit, so History, Detect, History makes 2 /history calls
+    // (milestone-4.md Regression, consistent with M4-app-02).
+    expect(callsTo(fetchMock, "/history")).toHaveLength(2);
   });
 });

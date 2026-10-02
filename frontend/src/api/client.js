@@ -59,6 +59,35 @@ export async function checkHealth() {
 }
 
 /**
+ * Stored detection records matching the filters, oldest first. `params` are the API's
+ * query params (start_date, end_date, min_confidence); see utils/history.js for building
+ * them. Resolves to [{id, timestamp: Date, count, averageConfidence, inferenceTimeMs}].
+ */
+export async function getHistory(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  ).toString();
+  const body = await request(`/history${query ? `?${query}` : ""}`);
+  if (!Array.isArray(body)) {
+    throw new ApiError("The server sent an unreadable response");
+  }
+  return body.map((record) => ({
+    id: record.id,
+    // The backend sends microseconds; JS only guarantees parsing milliseconds.
+    timestamp: new Date(String(record.timestamp).replace(/(\.\d{3})\d+/, "$1")),
+    count: record.count,
+    averageConfidence: record.average_confidence,
+    inferenceTimeMs: record.inference_time_ms,
+  }));
+}
+
+/** Delete every stored record (ignores any filters). Resolves to how many were removed. */
+export async function clearHistory() {
+  const body = await request("/reset", { method: "DELETE" });
+  return body.count_removed;
+}
+
+/**
  * Run person detection on an image file.
  * Resolves to {count, detections: [{bbox: [x1,y1,x2,y2], confidence}], averageConfidence,
  * inferenceTimeMs, imageWidth, imageHeight, annotatedImageBase64}. `bbox` is in pixels of
