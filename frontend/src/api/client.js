@@ -2,6 +2,9 @@
 // Pages and components get plain objects or an ApiError, never raw fetch responses.
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
+export const API_BASE_URL = BASE_URL;
+
+const HEALTH_TIMEOUT_MS = 5000;
 
 export class ApiError extends Error {
   constructor(message, status = null) {
@@ -35,6 +38,24 @@ async function request(path, options = {}) {
     throw new ApiError("The server sent an unreadable response", response.status);
   }
   return body;
+}
+
+/**
+ * True if the backend answers /health within 5 s. Never throws: offline is a state, not
+ * an error. The timeout matters for a hung backend (accepts the connection, never
+ * answers): without it the check never settles and a stale "online" stays on screen.
+ */
+export async function checkHealth() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+  try {
+    const body = await request("/health", { signal: controller.signal });
+    return body?.status === "ok";
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

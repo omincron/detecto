@@ -147,19 +147,21 @@ describe("DetectionView", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  // The notes.txt, anim.gif and empty.jpg rows were removed: the browser-side upload
+  // pre-check (PROGRESS.md, 2026-10-02) now rejects them without a /detect call.
+  // They are covered by M3b-pre-01 and M3b-pre-02 (DetectionView.precheck.test.jsx).
+  // huge.jpg is 1 byte, so it passes the pre-check and only simulates a
+  // frontend/backend limit mismatch (see also M3b-pre-06).
   it.each([
-    ["notes.txt", "text/plain", 415, "Unsupported file type: text/plain"],
-    ["anim.gif", "image/gif", 415, "Unsupported image format: GIF. Only JPEG and PNG are accepted"],
-    ["empty.jpg", "image/jpeg", 400, "Uploaded file is empty"],
     ["huge.jpg", "image/jpeg", 413, "File too large (max 10 MB)"],
     ["ok.jpg", "image/jpeg", 500, "Inference failed: boom"],
   ])(
-    "M3-view-06: %s is sent unchanged and the backend message is shown",
+    "M3-view-06: %s passes the pre-check, is sent unchanged and the backend message is shown",
     async (name, type, status, detail) => {
       const fetchMock = mockFetch({ detect: () => jsonResponse({ detail }, status) });
       const user = userEvent.setup({ applyAccept: false });
       const { container } = render(<DetectionView />);
-      const file = new File(name === "empty.jpg" ? [] : ["x"], name, { type });
+      const file = new File(["x"], name, { type });
 
       await pick(user, file);
 
@@ -196,13 +198,11 @@ describe("DetectionView", () => {
     expect(alert.textContent).toMatch(/can't reach/i);
   });
 
+  // Changed by the browser-side upload pre-check (PROGRESS.md, 2026-10-02): notes.txt is
+  // now rejected in the browser, so only zidane.jpg reaches /detect. The backend-rejection
+  // variant is M3b-pre-08b; this case matches M3b-pre-08a.
   it("M3-view-08: a valid image after an error clears the error and shows the result", async () => {
-    mockFetch({
-      detect: inOrder(
-        () => jsonResponse({ detail: "Unsupported file type: text/plain" }, 415),
-        () => jsonResponse(D2),
-      ),
-    });
+    const fetchMock = mockFetch({ detect: () => jsonResponse(D2) });
     const user = userEvent.setup({ applyAccept: false });
     render(<DetectionView />);
 
@@ -213,6 +213,7 @@ describe("DetectionView", () => {
     expect(await screen.findByTestId("person-count")).toHaveTextContent(/^2$/);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getAllByTestId("bounding-box")).toHaveLength(2);
+    expect(callsTo(fetchMock, "/detect")).toHaveLength(1);
   });
 
   it("M3-view-09: a new pick removes the previous result and hover state at once", async () => {

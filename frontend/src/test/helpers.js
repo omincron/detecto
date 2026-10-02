@@ -54,10 +54,19 @@ export function deferred() {
  *  - "/samples/index.json" → manifest (a value sent as JSON, or a function returning a Response/promise)
  *  - "/samples/<file>"     → samples[file]() if given, else a JPEG blob
  *  - ".../detect..."       → detect(url, options) (a Response or a promise of one)
+ *  - ".../health"          → health(url, options), default 200 {"status": "ok"}
  */
-export function mockFetch({ manifest = [], samples = {}, detect } = {}) {
+export function mockFetch({
+  manifest = [],
+  samples = {},
+  detect,
+  health = () => jsonResponse({ status: "ok" }),
+} = {}) {
   const fetchMock = vi.fn(async (url, options) => {
     const path = String(url);
+    if (path.endsWith("/health")) {
+      return health(path, options);
+    }
     if (path === "/samples/index.json") {
       return typeof manifest === "function" ? manifest() : jsonResponse(manifest);
     }

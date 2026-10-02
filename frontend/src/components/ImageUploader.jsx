@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { Button, Group, Paper, Text, ThemeIcon } from "@mantine/core";
+import { IconUpload } from "@tabler/icons-react";
+import { MAX_UPLOAD_MB } from "../config.js";
 
 const ACCEPT = "image/jpeg,image/png";
 
 /**
  * File picker + drag-and-drop + demo samples from public/samples/. Calls onSelect(file)
- * with a File; format validation is left to the backend (single source of truth), whose
- * error message the page shows.
+ * with a File; the page runs the upload pre-check and the backend does the real
+ * validation.
  *
  * Samples are listed in public/samples/index.json — a static site can't list a folder.
  */
@@ -58,26 +61,57 @@ export default function ImageUploader({ onSelect, disabled = false }) {
   };
 
   return (
-    <div className="uploader">
-      <div
-        className={`dropzone${isDragging ? " dropzone--active" : ""}${disabled ? " dropzone--disabled" : ""}`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          if (!disabled) setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setIsDragging(false);
-          handleFiles(event.dataTransfer.files);
-        }}
-        data-testid="dropzone"
-      >
-        <p>Drag an image here, or</p>
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={disabled}>
+    <Paper
+      withBorder
+      radius="lg"
+      p="md"
+      className={`dropzone${isDragging ? " dropzone--active" : ""}${disabled ? " dropzone--disabled" : ""}`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        if (!disabled) setIsDragging(true);
+      }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setIsDragging(false);
+        handleFiles(event.dataTransfer.files);
+      }}
+      data-testid="dropzone"
+    >
+      <Group gap="md" wrap="wrap">
+        <ThemeIcon color="sky" variant="light" size={44} radius="md" aria-hidden>
+          <IconUpload size={20} stroke={2} />
+        </ThemeIcon>
+        <div style={{ flexGrow: 1, minWidth: 200 }}>
+          <Text fw={600}>Drop an image here</Text>
+          <Text size="sm" c="dimmed">
+            JPEG or PNG, up to {MAX_UPLOAD_MB} MB
+          </Text>
+        </div>
+
+        {samples.length > 0 && (
+          <Group gap={8} wrap="wrap">
+            <Text size="sm" c="dimmed">
+              Or try a sample:
+            </Text>
+            {samples.map((sample) => (
+              <Button
+                key={sample.file}
+                variant="default"
+                radius="xl"
+                size="xs"
+                onClick={() => loadSample(sample)}
+                disabled={disabled}
+              >
+                {sample.label ?? sample.file}
+              </Button>
+            ))}
+          </Group>
+        )}
+
+        <Button size="md" onClick={() => inputRef.current?.click()} disabled={disabled}>
           Choose an image
-        </button>
-        <p className="dropzone__hint">JPEG or PNG, up to 10 MB</p>
+        </Button>
         <input
           ref={inputRef}
           type="file"
@@ -89,25 +123,13 @@ export default function ImageUploader({ onSelect, disabled = false }) {
             event.target.value = ""; // allow re-selecting the same file
           }}
         />
-      </div>
+      </Group>
 
-      {samples.length > 0 && (
-        <div className="samples">
-          <span className="samples__title">Or try a sample:</span>
-          {samples.map((sample) => (
-            <button
-              key={sample.file}
-              type="button"
-              className="samples__button"
-              onClick={() => loadSample(sample)}
-              disabled={disabled}
-            >
-              {sample.label ?? sample.file}
-            </button>
-          ))}
-          {sampleError && <p className="error error--inline">{sampleError}</p>}
-        </div>
+      {sampleError && (
+        <Text size="sm" c="peach.8" mt="sm">
+          {sampleError}
+        </Text>
       )}
-    </div>
+    </Paper>
   );
 }

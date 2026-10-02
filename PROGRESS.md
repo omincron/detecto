@@ -254,8 +254,10 @@ Built:
 - **The `<img>` shows the original upload** (an object URL), and the boxes are drawn in
   the browser. `return_annotated` isn't used: it would roughly double the response size,
   and boxes in the DOM can be highlighted and toggled.
-- **Format and size are validated by the backend only,** so its rules exist in one
-  place. The file picker's `accept` attribute just narrows the dialog.
+- ~~**Format and size are validated by the backend only,** so its rules exist in one
+  place. The file picker's `accept` attribute just narrows the dialog.~~
+  *Superseded on 2026-10-02 by the browser-side upload pre-check (user decision). See
+  "Open decisions" and ARCHITECTURE.md §4.1.*
 - **Stale responses:** if a new image is picked mid-request, the older response is
   ignored.
 - **No router:** two pages managed with state.
@@ -312,7 +314,85 @@ timed out. The first check was also confirmed visually.
 - **Frozen backend (`kill -STOP`):** the uploader stays usable, and after `kill -CONT`
   only the newer image's result is shown.
 
+### 2026-10-02 — Design pass (milestone 3b): Mantine rebuild
+
+Built:
+- **Mantine 9 with the agreed look** (theme in `src/theme.js`): neutral base, pastel
+  palettes, IBM Plex fonts bundled through @fontsource, light mode only.
+- **AppShell:** a sidebar with the wordmark, "Pages" navigation and a `BackendStatus`
+  card. It collapses behind a burger below `sm`.
+- **Detect page restyled:** upload bar, image card, pastel stat cards and a detections
+  list with confidence bars. Box labels now sit inside the box's top-left corner.
+- **Browser-side upload pre-check** (`utils/validateUpload.js`, user decision): rejects
+  empty files, files over `VITE_MAX_UPLOAD_MB` (default 10; also drives the hint) and
+  declared types that are clearly not JPEG/PNG. An empty type or `application/octet-stream`
+  goes on to the backend.
+- **`checkHealth()`** polls every 30 s with a 5 s timeout.
+- **Test infrastructure:** `src/test/setup.js` polyfills `matchMedia` and
+  `ResizeObserver` and wraps every `render` in the app's MantineProvider.
+
+**Testing gate:**
+- `test-planner` wrote `test-plans/milestone-3b.md` (48 cases, 13 manual checks). The
+  user resolved:
+  - **OQ-1:** octet-stream passes the pre-check.
+  - **OQ-2:** the health check aborts after 5 s and shows "offline".
+  - **OQ-3:** the offline hint shows the configured API URL.
+  - **OQ-4:** the burger has `aria-expanded`/`aria-controls`, and the sidebar is an
+    `aside`, so "Pages" is the only nav landmark.
+  - **OQ-5:** docs updated (ARCHITECTURE.md §3.3 `/health`, §4.1 pre-check, §4.3 UI kit
+    and settings).
+- `test-generator` added 81 frontend tests and 2 backend tests. All failures were either
+  the 7 agreed OQ changes or 5 old M3 tests.
+- After the app fixes, **`test-healer` ran for the first time:**
+  - M3-view-06 (3 rows) and M3-view-08 were outdated by the pre-check decision. It
+    updated them and confirmed the replacement M3b tests pass first.
+  - **M3-summary-01 escalated:** the redesign had dropped the `dl/dt/dd` pairing of stat
+    labels and values (an accessibility loss). **The user chose to restore it**, so the
+    stat cards are a `dl` again, and the test passes unchanged.
+  - Report: `test-plans/milestone-3b-healer-report.md`.
+- **Result:** frontend 156/156, backend 170/170, and the build passes.
+
+**Live checks (Claude in Chrome, measured in the DOM and the network log):**
+- **Pre-check:** .txt, .gif, a 0-byte file and 10 MiB + 1 byte are rejected with **0**
+  POSTs. `PHOTO.JPG`, a file with no type and octet-stream each make exactly 1 POST.
+- **Fonts:** load from the app; no Google Fonts requests.
+- **Landmarks:** one nav landmark, and the stat `dl` pairing is present.
+- **Frozen backend:** the card shows "Backend offline · Can't reach http://localhost:8000"
+  11 s after `kill -STOP`, and "online" again 18 s after `kill -CONT`.
+- **Not done:** visual comparison with the mockup, focus rings and contrast, because
+  screenshots time out in the browser tool. Those are for the user to eyeball.
+
+**Height fixes (from a user-requested viewport check):**
+- **Wasted strip:** AppShell reserved the mobile header's 56px on desktop too, leaving an
+  empty band above the sidebar and the page. It's now `header.height: {base: 56, sm: 0}`.
+- **Portrait overflow:** `bus.jpg` overflowed an 871px window by 128px, because the 75vh
+  cap ignored the roughly 300px of page above the image. The cap is now
+  `max(320px, calc(100dvh - 300px))`.
+- **Re-measured:**
+  - the sidebar is at y = 0;
+  - the portrait image is 571px and its card ends at 840 of 871, with no scroll;
+  - landscape also fits with no scroll;
+  - a 382px-tall window keeps the 320px floor and scrolls;
+  - at 500px wide the header is 56px with the title below it.
+- **Lesson:** the M3 check confirmed the 75vh cap was applied, not that the whole card
+  fit on screen. Manual check 14 in the 3b plan now measures the full layout.
+
 ## Open decisions for later milestones
+
+- **Design direction (agreed 2026-10-02):** Mantine, light mode only, a neutral base
+  with pastel accents, and IBM Plex Sans/Mono. No logo yet; the product name is a text
+  wordmark. Reference mockup: https://claude.ai/artifact/Y59trr8m7kAdmZCJgQSExS (Detect
+  and History pages). Rebuild the Detect page in Mantine before M4, then build M4 in it.
+- **Browser-side upload pre-check (user decision 2026-10-02, part of the Mantine pass):**
+  reject empty files, files over the size limit, and a declared type other than
+  JPEG/PNG before uploading, so the error is instant. The backend stays the real
+  validator (magic bytes, decoding). The limit comes from one frontend setting
+  (`VITE_MAX_UPLOAD_MB`, default 10), which also drives the "up to N MB" hint (closes
+  M3 OQ-5). It must match the backend's `MAX_UPLOAD_BYTES`; note that in the README.
+- **Clear history (user decision 2026-10-02, M4):** a confirmation dialog stating the
+  scope: deletes *all* records, ignores the current filters, can't be undone, and shows
+  the record count. `/reset` stays "delete everything"; filtered deletion is not planned.
+  No auth on `/reset` is a known limitation, to be noted in the README.
 
 - **M4 requirement (from M2 OQ-3):** `/history` date-only filters are UTC days. The
   History view's FilterBar must send datetimes with an offset, built from the user's

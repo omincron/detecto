@@ -140,6 +140,10 @@ detecto/
   - `415` unsupported format: a non-image declared type, or a real non-JPEG/PNG image
   - `500` inference failure
 
+**`GET /health`**
+- Returns `200 {"status": "ok"}` without loading the model. The frontend's sidebar
+  status card polls it every 30 s, with a 5 s timeout.
+
 **`GET /history`**
 - Query params (all optional):
   - `start_date`, `end_date` take a date (`2026-10-02`) or an ISO datetime
@@ -202,6 +206,13 @@ WARMUP_MODEL=true
   call `/detect`, render the returned image with `BoundingBoxOverlay`, show
   `DetectionSummary` (count, avg confidence, processing time). Handles and surfaces
   API errors inline.
+  - **Upload pre-check** (`utils/validateUpload.js`): before uploading, the browser
+    rejects an empty file, a file over `VITE_MAX_UPLOAD_MB`, or a declared type that's
+    clearly not JPEG/PNG. An empty type or `application/octet-stream` is let through.
+    The error is shown instantly in the same alert. This is only a fast path: the
+    backend stays the authoritative validator (magic bytes, decoding, its own
+    `MAX_UPLOAD_BYTES`). `VITE_MAX_UPLOAD_MB` must equal `MAX_UPLOAD_BYTES`, and a test
+    checks that the two match.
 - **HistoryView** — on mount, call `/history`; render `HistoryTable` and
   `HistoryChart` (timestamp vs. count); `FilterBar` re-queries `/history` with
   date/time/confidence params.
@@ -233,6 +244,11 @@ downscaled frame), not the uploaded file's own size.
   `ApiError` whose message can be shown as-is: the backend's `detail`, or a "can't reach
   the server" message.
 - Navigation between the two pages is plain component state, with no router dependency.
+- UI kit: Mantine, with the theme in `src/theme.js` (neutral base, pastel palettes,
+  IBM Plex fonts bundled through @fontsource, light mode only). The app shell is a Mantine
+  `AppShell`: a sidebar with the "Pages" navigation and a `BackendStatus` card
+  (`/health`), collapsing behind a burger button below the `sm` breakpoint.
+- Frontend settings (`frontend/.env`): `VITE_API_BASE_URL` and `VITE_MAX_UPLOAD_MB`.
 - Demo images in `public/samples/` are listed in `public/samples/index.json`
   (`[{file, label}]`), because a static site can't list a folder.
 - DetectionView shows two timings:
