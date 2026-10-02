@@ -1,12 +1,19 @@
 """Shared fixtures: app client, fake detector, per-test DB path."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 from backend import config
 from backend.main import app
+from backend.models.record import DetectionRecord
 from backend.services.detector import get_detector
+from backend.services.storage import get_storage
+from backend.tests.helpers import DATASET_S
+
+REAL_DB = Path(config.PROJECT_ROOT) / "backend" / "detecto.db"
 
 DEFAULT_DETECTIONS = [
     {"bbox": [1, 2, 30, 40], "confidence": 0.9},
@@ -62,3 +69,37 @@ def client():
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
 
+
+
+@pytest.fixture
+def storage():
+    """SQLiteStorage on the per-test temp DB (same one the app uses)."""
+    return get_storage()
+
+
+@pytest.fixture
+def dataset_s(storage):
+    """Seeds dataset S (see helpers.DATASET_S); returns {rec_name: saved record}."""
+    saved = {}
+    for name, ts, count, avg, ms in DATASET_S:
+        saved[name] = storage.save(
+            DetectionRecord(
+                timestamp=ts, count=count, average_confidence=avg, inference_time_ms=ms
+            )
+        )
+    return saved
+
+
+@pytest.fixture(scope="session", autouse=True)
+def real_db_untouched():
+    """M2-reg-01: the real backend/detecto.db is never written by the suite."""
+
+    def snapshot():
+        if not REAL_DB.exists():
+            return None
+        stat = REAL_DB.stat()
+        return (stat.st_size, stat.st_mtime_ns)
+
+    before = snapshot()
+    yield
+    assert snapshot() == before, f"M2-reg-01: {REAL_DB} changed during the test run"

@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
 
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from backend import config
-from backend.routes import detect
+from backend.routes import detect, history
 from backend.services.detector import get_detector
 
 
@@ -31,6 +33,18 @@ app.add_middleware(
 )
 
 app.include_router(detect.router)
+app.include_router(history.router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    # Keep the error contract (ARCHITECTURE.md §3.3): 400 with a displayable string
+    # detail, instead of FastAPI's default 422 with a list of error objects.
+    messages = []
+    for err in exc.errors():
+        field = ".".join(str(part) for part in err["loc"] if part not in ("query", "body"))
+        messages.append(f"{field}: {err['msg']}")
+    return JSONResponse(status_code=400, content={"detail": "; ".join(messages)})
 
 
 @app.get("/health")

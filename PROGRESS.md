@@ -15,12 +15,12 @@ Testing gate (end of every milestone), using the agents in `.claude/agents/`:
    goes to human review). It writes `test-plans/milestone-N-healer-report.md`.
 A milestone is done only when the suite passes and the human-review items are resolved.
 
-## Status: Milestone 1 complete — Backend skeleton
+## Status: Milestone 2 complete — Storage
 
 ## Plan (milestones)
 
-1. **Backend skeleton** — FastAPI app, YOLOv8 model loading, `/detect` on a single image *(in progress)*
-2. **Storage** — SQLite schema, `/history`, `/reset`
+1. **Backend skeleton** — FastAPI app, YOLOv8 model loading, `/detect` on a single image *(done)*
+2. **Storage** — SQLite schema, `/history`, `/reset` *(done)*
 3. **Frontend detection view** — upload + bounding box overlay
 4. **Frontend history view** — table/chart + filters
 5. **Evaluation** — run the 10 sample images, fill in README metrics table
@@ -142,7 +142,86 @@ add `/history` and `/reset`.
 - Run: `backend/.venv/bin/python -m pytest` (add `-m "not integration"` to skip the
   real-model tests).
 
+### 2026-10-02 — Milestone 2: storage
+
+Built and smoke-tested:
+
+- `backend/models/record.py`: added `DetectionRecord` (id, timestamp, count,
+  average_confidence, inference_time_ms), `ResetResponse` and the `CREATE TABLE` SQL,
+  kept side by side as the single definition of a record. Adds an index on `timestamp`.
+- `backend/services/storage.py`: `SQLiteStorage` with `save` / `list(filters)` / `clear`,
+  the interface from ARCHITECTURE.md §3.1. `get_storage()` is the FastAPI dependency.
+- `backend/routes/history.py`: `GET /history` (date and `min_confidence` filters) and
+  `DELETE /reset`.
+- `/detect` now saves one record per successful detection and logs one `INFO` line
+  with count, average confidence, inference time and frame size. This covers M1's
+  deferred performance logging (OQ-9).
+- `main.py`: registers the history router. A `RequestValidationError` handler turns
+  FastAPI's 422 list into `400 {"detail": "<string>"}` on every endpoint.
+- `config.py`: a relative `DB_PATH` resolves from the project root, so starting the
+  server from `backend/` no longer creates a second DB.
+
+**Smoke test** (TestClient, real model, temp DB):
+- 2x `bus.jpg` saves 2 records. An empty upload saves nothing.
+- The filters behave as designed.
+- Bad dates, a non-numeric `min_confidence` and a reversed range all return 400 with a
+  string `detail`.
+- `/reset` returns `count_removed: 2`, then `0`. The Milestone 1 suite still passes
+  (71/71).
+
+**Decisions made** (the spec is silent on these; documented in ARCHITECTURE.md §3.3):
+- **Timestamps:** stored as fixed-width UTC strings (`YYYY-MM-DDTHH:MM:SS.ffffffZ`), so string
+  comparison is chronological. Filter values without a timezone are taken as UTC.
+  - The frontend should send UTC, e.g. `Date.toISOString()`, or include an offset.
+- **Date filters:** a date-only `end_date` includes the whole day. A datetime
+  `end_date` is exclusive.
+- **`min_confidence`:** filters on the record's *average* confidence (≥), since per-box
+  confidences aren't stored.
+- **Order:** `/history` returns records oldest first, which suits a time-series chart.
+- **Failed saves:** a failed save doesn't fail `/detect`. It's logged and the result is
+  still returned.
+- **Connections:** one SQLite connection per call, because FastAPI's threadpool can't
+  share sqlite3 connections. There's no pooling or ORM; it isn't needed at this scale.
+- **422 → 400:** validation errors now return 400 on every endpoint. This changes
+  behavior beyond `/history`, e.g. `/detect?return_annotated=maybe` was 422 and is now
+  400.
+
+**Testing gate:** `test-planner` wrote `test-plans/milestone-2.md`. The user resolved its
+open questions (see the plan's "Resolved decisions"):
+- Empty filter values mean no filter.
+- Extreme dates never return 500.
+- `min_confidence` always keeps zero-person records.
+- A record is saved only after the full response is built, so an annotation failure
+  returns 500 and saves nothing.
+- Date-only filters stay UTC days; this is recorded as an M4 FilterBar requirement below.
+
+`test-generator` wrote 92 M2 tests:
+- `test_storage.py`, `test_history.py` and `test_detect_persistence.py` are new.
+- Additions to `test_config.py`, `test_cors.py`, `conftest.py` and `helpers.py`.
+- A session-wide check that the suite never touches the real `backend/detecto.db`.
+
+First run: 150 passed and 13 failed. Every failure was one of the agreed app changes,
+and all 71 M1 tests passed.
+
+App fixes:
+- **Storage:** timestamps are written with `isoformat`, because `strftime("%Y")` doesn't
+  zero-pad years below 1000. `min_confidence` uses `person_count = 0 OR
+  average_confidence >= ?`.
+- **`/history`:** filters are parsed as strings, so an empty value means no filter.
+  `end_date=9999-12-31` means no upper bound. A UTC overflow gives a 400. NaN is
+  rejected.
+- **`/detect`:** annotation errors return 500 with a `detail`, and the record is saved
+  after annotation.
+
+**Result: 163/163 pass.** `test-healer` was not needed, because no failures were left
+to sort.
+
 ## Open decisions for later milestones
+
+- **M4 requirement (from M2 OQ-3):** `/history` date-only filters are UTC days. The
+  History view's FilterBar must send datetimes with an offset, built from the user's
+  *local* midnight (e.g. `new Date(y, m, d).toISOString()`), not bare `YYYY-MM-DD`
+  dates. Otherwise a user at UTC+2 picking "Oct 2" gets 02:00 to 02:00 local time.
 
 - Whether to persist bounding boxes in history (currently: no, only summary stats —
   see ARCHITECTURE.md §3.4). Revisit if History view ever needs per-box replay.

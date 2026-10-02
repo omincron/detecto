@@ -141,12 +141,32 @@ detecto/
   - `500` inference failure
 
 **`GET /history`**
-- Query params: `start_date`, `end_date`, `min_confidence` (all optional).
+- Query params (all optional):
+  - `start_date`, `end_date` take a date (`2026-10-02`) or an ISO datetime
+    (`2026-10-02T14:30`, `…Z`, `…+02:00`). A value without a timezone is taken as UTC.
+  - `start_date` is inclusive. A date-only `end_date` includes that whole day. A
+    datetime `end_date` is exclusive.
+  - `min_confidence` (0–1) keeps records whose *average* confidence is ≥ the value.
+    Records with no people (`count == 0`) are always kept, so the chart doesn't lose
+    its "nobody present" points when the threshold moves.
+  - An empty value (`?min_confidence=`) means the same as leaving the parameter out.
 - Output: array of stored records `{id, timestamp, count, average_confidence,
-  inference_time_ms}`.
+  inference_time_ms}`, oldest first. `timestamp` is UTC ISO 8601 with `Z`.
+- Errors: `400` for an unparseable date or number, a date that can't be represented in
+  UTC, `start_date` ≥ `end_date`, or `min_confidence` outside 0–1. Never `500` for a
+  parseable date.
 
 **`DELETE /reset`**
 - Clears all stored records. Returns `{"status": "cleared", "count_removed": N}`.
+
+**All endpoints:** request validation errors are `400` with a string `detail`, not
+FastAPI's default `422` list.
+
+**Persistence from `/detect`:** each *successful* detection saves one record (step 8).
+Rejected uploads, inference failures and annotation failures save nothing: the
+record is saved only once the full response has been built. If the save itself fails, the
+error is logged and the detection result is still returned. Each detection also writes
+one `INFO` log line (count, average confidence, inference time, frame size).
 
 ### 3.4 Storage schema (SQLite)
 
@@ -168,7 +188,7 @@ view later needs per-box detail.
 ```
 MODEL_PATH=yolov8n.pt
 CONFIDENCE_THRESHOLD=0.5
-DB_PATH=./backend/detecto.db
+DB_PATH=./backend/detecto.db       # relative paths resolve from the project root
 CORS_ORIGINS=http://localhost:5173
 MAX_UPLOAD_BYTES=10485760
 WARMUP_MODEL=true

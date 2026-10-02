@@ -1,10 +1,16 @@
 """config.py env parsing. Each test reloads backend.config, then restores it."""
 
 import importlib
+from pathlib import Path
 
+import dotenv
 import pytest
 
+import backend
 from backend import config
+from backend.tests.helpers import png_bytes
+
+REPO_ROOT = Path(backend.__file__).resolve().parent.parent
 
 
 @pytest.fixture
@@ -54,3 +60,39 @@ def test_defaults_when_unset(env):
 
     assert config.MAX_UPLOAD_BYTES == 10 * 1024 * 1024
     assert config.WARMUP_MODEL is True
+
+
+def test_relative_db_path_resolves_from_project_root(env, tmp_path):
+    """M2-config-01"""
+    env.setenv("DB_PATH", "data/x.db")
+    env.chdir(tmp_path)
+    importlib.reload(config)
+
+    assert config.DB_PATH == str(REPO_ROOT / "data" / "x.db")
+
+
+def test_absolute_db_path_used_unchanged(env, tmp_path):
+    """M2-config-02 (A)"""
+    env.setenv("DB_PATH", str(tmp_path / "abs.db"))
+    importlib.reload(config)
+
+    assert config.DB_PATH == str(tmp_path / "abs.db")
+
+
+def test_db_path_default(env):
+    """M2-config-02 (B): the repo .env sets DB_PATH, so load_dotenv is disabled here."""
+    env.setattr(dotenv, "load_dotenv", lambda *a, **k: False)
+    env.delenv("DB_PATH", raising=False)
+    importlib.reload(config)
+
+    assert config.DB_PATH == str(REPO_ROOT / "backend" / "detecto.db")
+
+
+def test_db_path_isolated_after_config_reload(client, fake_detector, tmp_path):
+    """Regression (M1-config-01 reload): later tests still use the per-test temp DB."""
+    assert config.DB_PATH == str(tmp_path / "test.db")
+
+    assert client.post(
+        "/detect", files={"image": ("a.png", png_bytes(), "image/png")}
+    ).status_code == 200
+    assert (tmp_path / "test.db").exists()

@@ -22,3 +22,17 @@ def test_preflight_from_unknown_origin_denied(client):
 
     assert response.status_code != 200
     assert "access-control-allow-origin" not in response.headers
+
+
+def test_new_routes_allowed_for_frontend(client):
+    """M2-cors-01"""
+    origin = "http://localhost:5173"
+    preflight = client.options(
+        "/reset", headers={"Origin": origin, "Access-Control-Request-Method": "DELETE"}
+    )
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == origin
+
+    response = client.get("/history", headers={"Origin": origin})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
