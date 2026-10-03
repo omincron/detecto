@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Alert, Button, Group, List, Loader, Modal, Text } from "@mantine/core";
 import { clearHistory, getHistory } from "../api/client.js";
+import ExportHistoryButton from "./ExportHistoryButton.jsx";
 
 /**
  * "Clear history" with a confirmation that states the real scope (PROGRESS.md, M4
@@ -12,12 +13,17 @@ export default function ClearHistoryButton({ onCleared }) {
   const [open, setOpen] = useState(false);
   const [total, setTotal] = useState(null); // null while counting
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null); // counting or deleting failed
+  // Kept apart from `error`, so starting a download doesn't wipe a delete failure.
+  const [exportError, setExportError] = useState(null);
+  // While the copy downloads, Delete and Cancel wait: deleting first could empty it.
+  const [exporting, setExporting] = useState(false);
 
   const openDialog = async () => {
     setOpen(true);
     setTotal(null);
     setError(null);
+    setExportError(null);
     try {
       setTotal((await getHistory()).length);
     } catch (err) {
@@ -48,7 +54,7 @@ export default function ClearHistoryButton({ onCleared }) {
       </Button>
       <Modal
         opened={open}
-        onClose={() => !busy && setOpen(false)}
+        onClose={() => !busy && !exporting && setOpen(false)}
         title={<Text fw={700}>Clear detection history?</Text>}
         centered
         radius="lg"
@@ -78,6 +84,17 @@ export default function ClearHistoryButton({ onCleared }) {
               <List.Item>It ignores the filters currently applied.</List.Item>
               <List.Item>It can't be undone.</List.Item>
             </List>
+            {/* No params: the copy covers what the delete covers, i.e. everything. */}
+            <ExportHistoryButton
+              variant="subtle"
+              size="compact-sm"
+              mt="sm"
+              onError={setExportError}
+              onBusyChange={setExporting}
+              disabled={busy}
+            >
+              Download a copy first (CSV)
+            </ExportHistoryButton>
           </>
         ) : null}
 
@@ -86,12 +103,17 @@ export default function ClearHistoryButton({ onCleared }) {
             {error}
           </Alert>
         )}
+        {exportError && (
+          <Alert color="peach" variant="light" mt="md" title="Couldn't download the copy.">
+            {exportError}
+          </Alert>
+        )}
 
         <Group justify="flex-end" mt="lg">
-          <Button variant="default" onClick={() => setOpen(false)} disabled={busy}>
+          <Button variant="default" onClick={() => setOpen(false)} disabled={busy || exporting}>
             Cancel
           </Button>
-          <Button color="peach.8" onClick={confirm} loading={busy} disabled={!total}>
+          <Button color="peach.8" onClick={confirm} loading={busy} disabled={!total || exporting}>
             {total === 1 ? "Delete 1 record" : total ? `Delete all ${recordsLabel}` : "Delete"}
           </Button>
         </Group>

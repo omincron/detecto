@@ -1,6 +1,8 @@
 // The only module that knows the backend URL and response shapes (ARCHITECTURE.md §4.3).
 // Pages and components get plain objects or an ApiError, never raw fetch responses.
 
+import { localTimeZone } from "../utils/history.js";
+
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 export const API_BASE_URL = BASE_URL;
 
@@ -14,30 +16,45 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, options = {}) {
-  let response;
+// Every call goes through here, so "backend unreachable" reads the same everywhere.
+async function send(path, options) {
   try {
-    response = await fetch(`${BASE_URL}${path}`, options);
+    return await fetch(`${BASE_URL}${path}`, options);
   } catch {
     throw new ApiError(`Can't reach the detection server at ${BASE_URL}. Is the backend running?`);
   }
+}
 
-  let body = null;
+// The backend's error contract: {"detail": "<string the UI can show as-is>"}.
+function failure(response, body) {
+  const detail = typeof body?.detail === "string" ? body.detail : null;
+  return new ApiError(detail ?? `Request failed (HTTP ${response.status})`, response.status);
+}
+
+async function readJson(response) {
   try {
-    body = await response.json();
+    return await response.json();
   } catch {
-    // Non-JSON body (e.g. a proxy error page); fall through to a generic message.
+    return null; // Non-JSON body (e.g. a proxy error page); callers fall back to a generic message.
   }
+}
 
-  if (!response.ok) {
-    // The backend's error contract: {"detail": "<string the UI can show as-is>"}.
-    const detail = typeof body?.detail === "string" ? body.detail : null;
-    throw new ApiError(detail ?? `Request failed (HTTP ${response.status})`, response.status);
-  }
+async function request(path, options = {}) {
+  const response = await send(path, options);
+  const body = await readJson(response);
+  if (!response.ok) throw failure(response, body);
   if (body === null) {
     throw new ApiError("The server sent an unreadable response", response.status);
   }
   return body;
+}
+
+// Query string from params, leaving out empty values ("" means "no filter").
+function toQuery(params) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  ).toString();
+  return query ? `?${query}` : "";
 }
 
 /**
@@ -64,10 +81,7 @@ export async function checkHealth() {
  * them. Resolves to [{id, timestamp: Date, count, averageConfidence, inferenceTimeMs}].
  */
 export async function getHistory(params = {}) {
-  const query = new URLSearchParams(
-    Object.entries(params).filter(([, value]) => value != null && value !== ""),
-  ).toString();
-  const body = await request(`/history${query ? `?${query}` : ""}`);
+  const body = await request(`/history${toQuery(params)}`);
   if (!Array.isArray(body)) {
     throw new ApiError("The server sent an unreadable response");
   }
@@ -79,6 +93,19 @@ export async function getHistory(params = {}) {
     averageConfidence: record.average_confidence,
     inferenceTimeMs: record.inference_time_ms,
   }));
+}
+
+/**
+ * The records matching `params` (same as getHistory) as a CSV file. `timeZone` (IANA,
+ * defaults to the browser's) adds a local-time column next to the UTC one.
+ * Resolves to {blob, filename}; the filename comes from the server when it sends one.
+ */
+export async function exportHistory(params = {}, { timeZone = localTimeZone() } = {}) {
+  const response = await send(`/history/export${toQuery({ ...params, tz: timeZone })}`);
+  if (!response.ok) throw failure(response, await readJson(response));
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? "detecto-history.csv";
+  return { blob: await response.blob(), filename };
 }
 
 /** Delete every stored record (ignores any filters). Resolves to how many were removed. */

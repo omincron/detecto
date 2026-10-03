@@ -3,6 +3,7 @@ import { Alert, Button, Group, Loader, Paper, Stack, Text, Title } from "@mantin
 import { IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
 import { getHistory } from "../api/client.js";
 import ClearHistoryButton from "../components/ClearHistoryButton.jsx";
+import ExportHistoryButton from "../components/ExportHistoryButton.jsx";
 import FilterBar, { EMPTY_FILTERS } from "../components/FilterBar.jsx";
 import HistoryChart from "../components/HistoryChart.jsx";
 import HistoryStats from "../components/HistoryStats.jsx";
@@ -18,6 +19,7 @@ export default function HistoryView({ onNavigate = () => {} }) {
   const [status, setStatus] = useState("loading"); // loading | done | error
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [exportError, setExportError] = useState(null);
   // Only the latest query may update the page (e.g. Apply clicked twice quickly).
   const latestRequest = useRef(0);
 
@@ -60,16 +62,35 @@ export default function HistoryView({ onNavigate = () => {} }) {
             People counted over time. Times are shown in your local time zone ({localTimeZone()}).
           </Text>
         </div>
-        <ClearHistoryButton
-          onCleared={(removed) => {
-            // Everything is gone, so filters no longer mean anything: reset them, or the
-            // page would say "No detections match these filters" as if data remained.
-            setDraft(EMPTY_FILTERS);
-            setNotice(`Deleted ${removed} ${removed === 1 ? "record" : "records"}.`);
-            load(EMPTY_FILTERS);
-          }}
-        />
+        <Group gap="sm">
+          {/* Exports what the page shows: the applied filters, not unsaved edits in the
+              filter bar. The label states that scope, as Clear history does for its own.
+              No count: the export re-queries, so a number could be stale by then. */}
+          <ExportHistoryButton
+            variant="default"
+            params={buildHistoryParams(applied)}
+            onError={setExportError}
+            disabled={!hasRecords}
+          >
+            {isFiltered(applied) ? "Export CSV (filtered)" : "Export CSV (all)"}
+          </ExportHistoryButton>
+          <ClearHistoryButton
+            onCleared={(removed) => {
+              // Everything is gone, so filters no longer mean anything: reset them, or the
+              // page would say "No detections match these filters" as if data remained.
+              setDraft(EMPTY_FILTERS);
+              setNotice(`Deleted ${removed} ${removed === 1 ? "record" : "records"}.`);
+              load(EMPTY_FILTERS);
+            }}
+          />
+        </Group>
       </Group>
+
+      {exportError && (
+        <Alert color="peach" variant="light" radius="md" icon={<IconAlertCircle size={20} />} title="Couldn't export the history." withCloseButton onClose={() => setExportError(null)}>
+          {exportError}
+        </Alert>
+      )}
 
       <FilterBar
         value={draft}

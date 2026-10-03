@@ -55,6 +55,7 @@ export function deferred() {
  *  - "/samples/<file>"     → samples[file]() if given, else a JPEG blob
  *  - ".../detect..."       → detect(url, options) (a Response or a promise of one)
  *  - ".../health"          → health(url, options), default 200 {"status": "ok"}
+ *  - ".../history/export"  → exportCsv(url, options) when given; otherwise falls through to history
  *  - ".../history..."      → history(url, options), default 200 []
  *  - ".../reset"           → reset(url, options); no default (unrouted → throws)
  */
@@ -64,6 +65,7 @@ export function mockFetch({
   detect,
   health = () => jsonResponse({ status: "ok" }),
   history = () => jsonResponse([]),
+  exportCsv,
   reset,
 } = {}) {
   const fetchMock = vi.fn(async (url, options) => {
@@ -82,6 +84,9 @@ export function mockFetch({
       if (!detect) throw new Error("no /detect route in this test");
       return detect(path, options);
     }
+    if (exportCsv && path.includes("/history/export")) {
+      return exportCsv(path, options);
+    }
     if (path.includes("/history")) {
       return history(path, options);
     }
@@ -98,6 +103,23 @@ export function mockFetch({
 /** fetch calls whose URL contains `part`. */
 export const callsTo = (fetchMock, part) =>
   fetchMock.mock.calls.filter(([url]) => String(url).includes(part));
+
+/** /history list queries only (callsTo(fetchMock, "/history") also matches /history/export). */
+export const listCalls = (fetchMock) =>
+  callsTo(fetchMock, "/history").filter(([url]) => !String(url).includes("/export"));
+
+/** A CSV download as /history/export sends it. */
+export const csvResponse = (
+  body = "id,timestamp_utc\r\n",
+  filename = "detecto-history-20261003-120000.csv",
+) =>
+  new Response(body, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${filename}"`,
+    },
+  });
 
 /** jsdom has no createObjectURL/revokeObjectURL: stub them (blob:mock/1, blob:mock/2, …). */
 export function stubObjectUrls() {

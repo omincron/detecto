@@ -40,6 +40,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Lets the frontend read the export's filename on a cross-origin download.
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(detect.router)

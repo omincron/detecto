@@ -37,7 +37,8 @@ detecto/
 │   ├── src/
 │   │   ├── api/
 │   │   │   └── client.js       # the only module that knows the backend: /detect,
-│   │   │                       #   /history, /reset, /health; ApiError messages
+│   │   │                       #   /history, /history/export, /reset, /health;
+│   │   │                       #   ApiError messages
 │   │   ├── components/
 │   │   │   ├── ImageUploader.jsx       # picker, drag-and-drop, samples
 │   │   │   ├── BoundingBoxOverlay.jsx  # percent-positioned boxes over the image
@@ -47,6 +48,7 @@ detecto/
 │   │   │   ├── HistoryStats.jsx        # History: KPI cards (dl)
 │   │   │   ├── HistoryChart.jsx        # History: people vs. time (Recharts)
 │   │   │   ├── HistoryTable.jsx        # History: records, newest first, paginated
+│   │   │   ├── ExportHistoryButton.jsx # CSV download of the given filters
 │   │   │   └── ClearHistoryButton.jsx  # scoped "Delete all N records" confirmation
 │   │   ├── pages/
 │   │   │   ├── DetectionView.jsx
@@ -54,7 +56,8 @@ detecto/
 │   │   ├── utils/
 │   │   │   ├── bbox.js           # box → percent math, formatters
 │   │   │   ├── validateUpload.js # browser-side upload pre-check
-│   │   │   └── history.js        # local time → UTC params, KPIs, time formatting
+│   │   │   ├── history.js        # local time → UTC params, KPIs, time formatting
+│   │   │   └── download.js       # save a Blob as a file (CSV export)
 │   │   ├── test/                 # Vitest setup (Mantine provider, polyfills) + helpers
 │   │   ├── config.js             # VITE_MAX_UPLOAD_MB
 │   │   ├── theme.js              # Mantine theme (neutral + pastels, IBM Plex)
@@ -68,7 +71,7 @@ detecto/
 │   ├── config.py               # env settings (DB_PATH resolved from project root)
 │   ├── routes/
 │   │   ├── detect.py           # POST /detect
-│   │   └── history.py          # GET /history, DELETE /reset
+│   │   └── history.py          # GET /history, GET /history/export, DELETE /reset
 │   ├── models/
 │   │   └── record.py           # Pydantic schemas + the SQLite table definition
 │   ├── services/
@@ -175,6 +178,24 @@ detecto/
   UTC, `start_date` ≥ `end_date`, or `min_confidence` outside 0–1. Never `500` for a
   parseable date.
 
+**`GET /history/export`** (bonus, M6)
+- Same `start_date`, `end_date` and `min_confidence` params as `/history`, with the same
+  `400`s, plus an optional `tz`: a name from the IANA list (`available_timezones()`,
+  minus `localtime`, `posixrules` and `Factory`), e.g. `Europe/Athens`. Anything else is
+  a `400` whose message quotes the value cut to 64 characters. With both a filter and
+  `tz` invalid, the filter's error wins.
+- Returns `text/csv; charset=utf-8` as an attachment named
+  `detecto-history-<UTC yyyymmdd-hhmmss>.csv` (CORS exposes `Content-Disposition` so
+  the frontend can read the name). Columns: `id, timestamp_utc, [timestamp_local,]
+  person_count, average_confidence, inference_time_ms`, oldest first, CRLF line ends.
+  `timestamp_local` is present only with `tz`. Timestamps are ISO 8601 with
+  milliseconds, truncated (never rounded into the next second or day): `…Z` for UTC,
+  and always a numeric offset for local (`+03:00`, and `+00:00`, never `Z`).
+  `average_confidence` is rounded to 4 decimals, `inference_time_ms` to 1.
+  No matches → header row only. ASCII only, so no UTF-8 BOM.
+- Every cell is a number or a server-generated timestamp, so no CSV-injection
+  escaping is needed; a future free-text column must be escaped.
+
 **`DELETE /reset`**
 - Clears all stored records. Returns `{"status": "cleared", "count_removed": N}`.
 
@@ -253,6 +274,15 @@ WARMUP_MODEL=true
     "Delete all N records" ("Delete 1 record" for one), that it ignores the current
     filters and that it can't be undone. Then `DELETE /reset`, a success notice, a
     reset of the filters, and an unfiltered reload ("No detections yet.").
+    The dialog also offers **Download a copy first (CSV)** (only when there are
+    records), which exports *all* records, matching the scope of the delete. While it
+    downloads, Delete, Cancel and closing the dialog wait; its errors have their own
+    alert, separate from count/delete errors.
+  - **Export CSV** (M6): exports the *applied* filters (what the page shows, not
+    unsaved filter-bar edits), with a local-time column in the browser's zone. The
+    label states the scope without a count (the export re-queries, so a count could
+    be stale): "Export CSV (all)" or "Export CSV (filtered)".
+    Disabled while loading or with no records.
   - **States:** loading, error (the backend's `detail`), "No detections yet" (with
     *Go to Detect*), and "No detections match these filters" (with *Reset filters*).
     Latest-request-wins applies to queries.
@@ -324,7 +354,7 @@ rework:
 | Region-based alerts | New rule check in `services/detector.py` after box filtering, before response |
 | Heatmaps / tracking lines | New aggregation in `services/storage.py` over stored (x,y) centroids — requires persisting box centroids, a schema addition |
 | Hourly stats panel | New query in `services/storage.py` (`GROUP BY strftime('%H', timestamp)`) + `/history/stats` route |
-| CSV/Excel export | New `/history/export` route streaming a CSV built from `storage.list()` |
+| CSV/Excel export | **Done (M6):** `/history/export` builds a CSV from `storage.list()`; CSV only (opens in Excel) |
 
 ## 7. Tech stack rationale
 

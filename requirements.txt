@@ -3,6 +3,8 @@ uvicorn[standard]==0.48.0
 python-multipart==0.0.29
 pydantic==2.13.4
 python-dotenv==1.0.1
+# IANA time zones for the CSV export's local-time column (Windows has no system tz database)
+tzdata==2026.5
 
 # CV / inference
 ultralytics==8.3.40

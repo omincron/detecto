@@ -15,7 +15,7 @@ Testing gate (end of every milestone), using the agents in `.claude/agents/`:
    goes to human review). It writes `test-plans/milestone-N-healer-report.md`.
 A milestone is done only when the suite passes and the human-review items are resolved.
 
-## Status: core milestones 1–5 done; Milestone 6 (bonus: CSV export) planned
+## Status: core milestones 1–5 done; Milestone 6 (bonus: CSV export) done
 
 ## Plan (milestones)
 
@@ -24,7 +24,7 @@ A milestone is done only when the suite passes and the human-review items are re
 3. **Frontend detection view** — upload + bounding box overlay *(done)*
 4. **Frontend history view** — table/chart + filters *(done)*
 5. **Evaluation** — run the 10 sample images, fill in README metrics table *(done)*
-6. **Bonus: CSV export** — `/history/export` + Export button *(planned)*
+6. **Bonus: CSV export** — `/history/export` + Export button *(done)*
 7. **Bonus (later)** — webcam/alerts/heatmaps/stats panel
 
 ## Log
@@ -528,43 +528,79 @@ needs a backend on :8000), frontend 244/244, build OK. Optional gaps noted, not
 required by the brief: `/detect` takes multipart only (no base64 body), and there is
 no ESLint config or `lint` script.
 
-### Milestone 6 (bonus): CSV export of history — planned, not started
+### 2026-10-03 — Milestone 6 (bonus): CSV export of history (done)
 
 **Why first:** the smallest bonus, and it softens the hard-delete `/reset`: users can keep
 their own copy before clearing (see PRODUCTION.md §1.3).
 
-**Backend:** `GET /history/export` in `routes/history.py`.
-- Takes the same `start_date`, `end_date` and `min_confidence` filters as `/history`,
-  reusing `parse_bound`/`parse_min_confidence` and `storage.list()`, with the same 400s.
-- Returns `text/csv; charset=utf-8` with
-  `Content-Disposition: attachment; filename="detecto-history-<UTC yyyymmdd-hhmmss>.csv"`.
-- Columns: `id,timestamp_utc,person_count,average_confidence,inference_time_ms`, one
-  row per record, oldest first. Timestamps are UTC ISO 8601 with `Z`. Built with the
-  `csv` module. An empty result still returns the header row.
-- CSV injection isn't possible today (every cell is a number or a timestamp we
-  generate); note this so a future text column (e.g. camera name) gets escaped.
+**User decisions (2026-10-03):** CSV only (no `.xlsx`); the export follows the applied
+filters; include a local-time column as well as UTC.
+
+**Backend** (`routes/history.py`):
+- `GET /history/export` takes the `/history` filters plus an optional `tz` (IANA name).
+  `parse_filters()` is now shared with `/history`, so both give the same 400s. An
+  unknown or malformed zone (`Mars/Base`, `/etc/passwd`) is a 400.
+- CSV via the `csv` module (CRLF): `id,timestamp_utc,[timestamp_local,]person_count,
+  average_confidence,inference_time_ms`, oldest first. ISO 8601 with milliseconds
+  (`…Z` / `…+03:00`). `timestamp_local` only with `tz`. No matches → header only.
+- `Content-Disposition: attachment; filename="detecto-history-<UTC yyyymmdd-hhmmss>.csv"`,
+  and `main.py`'s CORS now exposes `Content-Disposition` so the browser can read it.
+- `tzdata==2026.5` added to `requirements.txt` (Windows has no system tz database).
+- CSV injection: not possible today (numbers and our own timestamps only); noted in the
+  docstring and ARCHITECTURE §3.3 for any future text column.
 
 **Frontend:**
-- `api/client.js`: `exportHistory(params)` fetches the CSV as a blob (so errors go
-  through `ApiError` like everywhere else) and triggers the download with an object URL
-  and the server's filename.
-- History page: an **Export CSV** button next to Clear history. It exports the
-  **applied filters**, and says so ("Export 24 records" when filtered, "Export all N
-  records" otherwise). Disabled while loading or when there are no records.
-- Clear-history dialog: a **Download a copy first** link that exports *all* records
-  (the scope of the delete, not the filters).
+- `api/client.js`: `send`/`failure`/`readJson`/`toQuery` helpers shared by all calls;
+  `exportHistory(params, {timeZone})` returns `{blob, filename}` (server name, fallback
+  `detecto-history.csv`), sending the browser's zone by default.
+- `utils/download.js`: `saveBlob()` (object URL + temporary link, revoked next tick).
+- `components/ExportHistoryButton.jsx`: download button with busy state; errors go to
+  an `onError` prop.
+- History page: "Export CSV (all N)" / "Export CSV (N filtered)" next to Clear history,
+  exporting the *applied* filters; disabled while loading or empty; errors in a
+  dismissible "Couldn't export the history." alert.
+- Clear dialog: "Download a copy first (CSV)" exports everything (the delete's scope);
+  errors show in the dialog.
 
-**Docs:** README (features, API list, the known-limitations reset line), ARCHITECTURE.md
-§3.3 and §6.
+**Docs:** README (features, API, limitations), ARCHITECTURE.md §2, §3.3, §4.1, §6.
 
-**Open questions (to settle before building):**
-- OQ-1: CSV only, or also `.xlsx` (needs `openpyxl`)? Recommendation: CSV only; it opens
-  in Excel, and the brief says "CSV or Excel".
-- OQ-2: should the export follow the filters (recommended) or always export everything?
-- OQ-3: UTC timestamps only (recommended; unambiguous), or also a local-time column
-  (would need the browser to send its time zone)?
+**State after building:** backend 282 passed + 1 skipped, frontend 244/244 (no new tests
+yet), build OK. Smoke-tested the endpoint with TestClient on a temp DB.
 
-**Then:** the testing gate (planner → generator → healer) as for M1–M5.
+**RESUME CHECKLIST (testing gate):**
+1. [x] `test-planner` → `test-plans/milestone-6.md` (74 cases). It found a bug: `tz=Europe`
+   (a directory) and `tz` > 255 chars gave 500s. The user accepted all 13 recommendations
+   (plan's "Resolved decisions"), and the app was changed to match: `tz` checked against
+   `available_timezones()` minus `localtime`/`posixrules`/`Factory` (fixes the 500s); local
+   column always a numeric offset; confidence rounded to 4 decimals, time to 1; error
+   echo cut to 64 chars; labels "Export CSV (all)/(filtered)" without counts; dialog
+   locks Delete/Cancel/close while its download runs (`onBusyChange` prop) and has its
+   own export error alert. Suites still green (282+1 skipped / 244), build OK.
+2. [x] `test-generator`: backend 386 passed / 1 failed / 1 skipped, frontend 308/308,
+   build OK. New: `backend/tests/test_history_export.py`, `client.export.test.js`,
+   `download.test.js`, `ExportHistoryButton.test.jsx`, `HistoryView.export.test.jsx`;
+   `test/helpers.js` gained an `exportCsv` route, `listCalls`, `csvResponse`. The one
+   failure, M6-cors-02: Starlette adds `access-control-expose-headers` (and
+   allow-credentials) even for an unknown origin, without allow-origin.
+3. [x] `test-healer`: no A/B fixes; M6-cors-02 escalated as C (Starlette sends
+   expose-headers/allow-credentials for every origin; harmless without allow-origin).
+   User chose (a): the test now asserts only the absent allow-origin; plan case noted,
+   report has a "Resolution". Backend 387 passed + 1 skipped, frontend 308/308.
+4. [x] Live check in Chrome (window in front) on a sandbox: backend :8001 with a temp
+   `DB_PATH` and 5 seeded records, Vite :5174. All 5 manual cases passed:
+   - man-01: "Export CSV (all)" downloaded `detecto-history-20261003-114217.csv` (UTC
+     stamp) via one `GET /history/export?tz=Europe/Athens` → 200; cross-origin filename OK.
+   - man-02: CSV ASCII with CRLF, 6 columns, 5 rows oldest first; local times and counts
+     match the table.
+   - man-03: applied min confidence → "Export CSV (filtered)", file = the 1 matching row
+     (`min_confidence=1`); moving the slider to 40% without Apply exported the same row.
+   - man-04: the dialog's "Download a copy first (CSV)" exported all 5 unfiltered, no
+     `/reset`, dialog stayed open, still 5 records. Cancelled (no delete).
+   - man-05: backend stopped → "Couldn't export the history." with the can't-reach
+     message, no download; the alert closes.
+   Sandbox stopped and its DB removed; :8000 untouched. The 5 test CSVs are in
+   ~/Downloads (`detecto-history-20261003-*.csv`).
+5. [x] M6 marked done. Remaining: commit (ask the user first).
 
 **Other bonus candidates (later):** live webcam with overlays (also covers "live video
 capture through browser"), region-based alerts, heatmaps or tracking lines, a statistics

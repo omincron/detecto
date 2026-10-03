@@ -41,6 +41,8 @@ It has a **FastAPI** backend that runs **YOLOv8s** (Ultralytics) on the CPU, and
 - Filter by From/To date and time (in your local time zone) and by a minimum confidence.
 - KPI cards: detections, average people per frame, peak count, average model time.
 - A "People over time" chart on a real time axis, and a paginated table.
+- **Export CSV** downloads the records matching the applied filters, with UTC and
+  local-time columns. It opens in Excel.
 - **Clear history** asks for confirmation and states the real scope ("Delete all N
   records"; it ignores the current filters and can't be undone).
 
@@ -50,6 +52,8 @@ It has a **FastAPI** backend that runs **YOLOv8s** (Ultralytics) on the CPU, and
   Add `?return_annotated=true` to also get the image with boxes drawn on it (base64 JPEG).
 - `GET /history` returns saved detections. It takes optional `start_date`, `end_date` and
   `min_confidence`.
+- `GET /history/export` returns the same records as CSV (same filters, plus an optional
+  `tz` such as `Europe/Athens` for a local-time column).
 - `DELETE /reset` clears the history. `GET /health` is a liveness check.
 - Every error has a `{"detail": "<message>"}` body: 400 (missing, empty, corrupt or
   invalid input), 413 (too large), 415 (unsupported format), 500 (inference failure).
@@ -289,7 +293,7 @@ default to **YOLOv8s**:
   and wipe the history. That's acceptable for a local demo, not for a deployment, which
   would need login, roles (only an admin can clear history) and an audit log.
 - **Reset is a hard delete:** `/reset` removes the rows for good; there is no archive or
-  retention policy.
+  retention policy. The clear dialog offers a CSV download first.
 - **Upload limit set twice:** `VITE_MAX_UPLOAD_MB` (frontend pre-check) must match
   `MAX_UPLOAD_BYTES` (backend). A test checks that the shipped values agree.
 - **Base64 JSON input to `/detect`** (in the original brief) is deferred. Only multipart
