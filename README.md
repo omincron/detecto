@@ -93,6 +93,7 @@ needed; everything runs on the CPU.
 
 ### Backend
 ```bash
+cp .env.example .env                                         # local settings (gitignored)
 python3 -m venv backend/.venv
 backend/.venv/bin/pip install -r requirements.txt          # add -r requirements-dev.txt for tests
 backend/.venv/bin/python -m uvicorn backend.main:app --port 8000
@@ -100,7 +101,10 @@ backend/.venv/bin/python -m uvicorn backend.main:app --port 8000
 - Run it from the project root. On first start, Ultralytics downloads the model weights
   (`yolov8s.pt`, about 22 MB) into the project root.
 - The model is warmed up at startup, so the first request isn't slow.
-- Settings live in `.env` at the project root:
+- Settings live in `.env` at the project root, copied from the committed `.env.example`.
+  The real `.env` is gitignored so secrets never get committed. The brief's repo layout
+  lists `.env`; this keeps it local. Every setting has a built-in default, so the
+  backend also runs without one, and real environment variables override it:
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -114,10 +118,12 @@ backend/.venv/bin/python -m uvicorn backend.main:app --port 8000
 ### Frontend
 ```bash
 cd frontend
+cp .env.example .env   # local settings (gitignored)
 npm install
 npm run dev            # http://localhost:5173
 ```
-`frontend/.env` holds `VITE_API_BASE_URL=http://localhost:8000` and `VITE_MAX_UPLOAD_MB=10`.
+`frontend/.env` (from `frontend/.env.example`) holds `VITE_API_BASE_URL=http://localhost:8000`
+and `VITE_MAX_UPLOAD_MB=10`; both are also the defaults.
 The second must match the backend's `MAX_UPLOAD_BYTES`.
 
 ## Tests

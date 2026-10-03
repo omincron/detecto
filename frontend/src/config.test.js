@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("config", () => {
-  it("M3b-config-01: the default from frontend/.env is 10 MB, matching the backend", async () => {
+  it("M3b-config-01: the default is 10 MB, matching the backend", async () => {
     vi.resetModules();
     const { MAX_UPLOAD_MB, MAX_UPLOAD_BYTES } = await import("./config.js");
     expect(MAX_UPLOAD_MB).toBe(10);
@@ -55,9 +55,10 @@ describe("config", () => {
     },
   );
 
-  it("M3b-config-04: frontend/.env limit matches the backend MAX_UPLOAD_BYTES", () => {
-    const frontend = readEnv("../.env");
-    const root = readEnv("../../.env");
+  it("M3b-config-04: frontend/.env.example limit matches the backend MAX_UPLOAD_BYTES", () => {
+    // The shipped templates (.env itself is gitignored and may differ per machine).
+    const frontend = readEnv("../.env.example");
+    const root = readEnv("../../.env.example");
     const backendBytes = Number(root.MAX_UPLOAD_BYTES ?? 10485760); // backend/config.py default
     expect(Number(frontend.VITE_MAX_UPLOAD_MB) * MiB).toBe(backendBytes);
   });

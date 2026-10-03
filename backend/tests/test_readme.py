@@ -80,7 +80,7 @@ def test_results_table_automatic_column_matches_results_json():
 
 def test_results_heading_names_current_model_and_threshold():
     """M5-readme-02"""
-    env = dotenv.dotenv_values(ROOT / ".env")
+    env = dotenv.dotenv_values(ROOT / ".env.example")
     assert SUMMARY["model"] == "yolov8s.pt"
     assert SUMMARY["confidence_threshold"] == 0.5
     assert SUMMARY["images"] == len(TRUTH["images"])

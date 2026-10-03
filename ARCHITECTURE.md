@@ -234,6 +234,10 @@ MAX_UPLOAD_BYTES=10485760
 WARMUP_MODEL=true
 ```
 
+The committed template is `.env.example` (and `frontend/.env.example`); the real `.env`
+files are gitignored. Every backend key has the same default in `backend/config.py`, and
+the frontend keys have theirs in `src/api/client.js` and `src/config.js`.
+
 ## 4. Frontend architecture
 
 ### 4.1 Pages

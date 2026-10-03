@@ -1,4 +1,4 @@
-"""Model default (yolov8s.pt) in config, .env and the docs."""
+"""Model default (yolov8s.pt) in config, .env.example and the docs."""
 
 import importlib
 import re
@@ -24,7 +24,7 @@ def test_config_default_model_is_yolov8s(env):
 
 def test_shipped_env_selects_yolov8s():
     """M5-cfg-02"""
-    values = dotenv.dotenv_values(ROOT / ".env")
+    values = dotenv.dotenv_values(ROOT / ".env.example")
 
     assert values["MODEL_PATH"] == "yolov8s.pt"
     assert values["CONFIDENCE_THRESHOLD"] == "0.5"
@@ -46,7 +46,7 @@ def architecture_env_block():
 def test_architecture_env_sample_matches_shipped_env():
     """M5-cfg-03 [OQ-4]"""
     sample = architecture_env_block()
-    shipped = dotenv.dotenv_values(ROOT / ".env")
+    shipped = dotenv.dotenv_values(ROOT / ".env.example")
 
     assert sample["MODEL_PATH"] == "yolov8s.pt"
     for key in ("MODEL_PATH", "CONFIDENCE_THRESHOLD", "DB_PATH", "CORS_ORIGINS"):

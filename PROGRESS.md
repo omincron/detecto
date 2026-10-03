@@ -586,6 +586,17 @@ yet), build OK. Smoke-tested the endpoint with TestClient on a temp DB.
    expose-headers/allow-credentials for every origin; harmless without allow-origin).
    User chose (a): the test now asserts only the absent allow-origin; plan case noted,
    report has a "Resolution". Backend 387 passed + 1 skipped, frontend 308/308.
+4a. [x] **Done.** (user approved 2026-10-03): stop tracking `.env` and
+   `frontend/.env` (`git rm --cached`; local files stay), add `.env.example` +
+   `frontend/.env.example` with comments, gitignore `.env`, README setup says
+   `cp .env.example .env` and notes why. Point tests that read the shipped `.env` files
+   (`test_config.py`, `test_docs.py`, `test_readme.py`, `config.test.js`) at the examples.
+   No history rewrite: the file never held secrets.
+   Result: `.env.example` + `frontend/.env.example` (commented), `.env` in `.gitignore`,
+   both `.env` files untracked (local copies kept), README setup has the `cp` steps and
+   why, ARCHITECTURE §3.5 note (below the block; M5-cfg-03 parses the block). Tests
+   now read the templates. Fresh-clone check (both `.env` moved aside): backend 387 + 1
+   skipped, frontend 308/308, build OK; files restored byte-identical.
 4. [x] Live check in Chrome (window in front) on a sandbox: backend :8001 with a temp
    `DB_PATH` and 5 seeded records, Vite :5174. All 5 manual cases passed:
    - man-01: "Export CSV (all)" downloaded `detecto-history-20261003-114217.csv` (UTC

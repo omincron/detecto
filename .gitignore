@@ -1,3 +1,6 @@
+# Local settings (commit the .env.example templates instead)
+.env
+
 # Python
 backend/.venv/
 __pycache__/
