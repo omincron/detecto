@@ -418,102 +418,24 @@ need the Chrome window visible.
 and expect the old placeholder and no `/history` call. M4 changes that on purpose, so
 these go to the healer at the gate.
 
-**Testing gate — status and RESUME CHECKLIST (written 2026-10-02, mid-gate):**
-
-Done:
-- [x] `test-planner` wrote `test-plans/milestone-4.md` (59 cases, 13 manual checks).
-- [x] The user resolved all open questions. See the plan's "Resolved decisions" and
-  "Cases added by the resolutions". Summary: OQ-1 keep Detect mounted, OQ-2 inclusive
-  "To", OQ-3 reset filters after clear, OQ-4 pagination names, OQ-5 singular wording,
-  OQ-7 trim timestamps, OQ-10 dots-only chart. OQ-6 and OQ-8 are accepted as is.
-- [x] OQ-9 docs: ARCHITECTURE.md §2 file tree updated, and the charting library is
-  recorded as Recharts.
-- [x] Visual check in Chrome (window in front): the Detect page matches the mockup. On
-  History, the pickers send local time as UTC (18:30 Athens → `…T15:30:00.000Z`), and
-  the dialog said "Delete all 34 records" with 24 filtered. It was cancelled; no DELETE.
-
-In progress when this was written:
-- [x] `test-generator` wrote the M4 tests: 230 frontend and 171 backend. The first run had
-  215/230 frontend (9 agreed-change failures, the 5 shell tests, and 1 ICU alias quirk
-  for M4-fmt-02) and 171/171 backend.
-- [x] **Step 1 done:** all 7 app changes, plus a fix found by the generator: the modal's
-  close button now has `aria-label="Close"`. All 9 agreed-change tests pass.
-- Note: the original "if the session ended before it reported" fallback is kept below
-  for reference. **If the session ended before it reported:**
-  run `npm test` in `frontend/` and `backend/.venv/bin/python -m pytest` from the root.
-  Check `git status` for new `*.test.js(x)` files and whether every plan case (including
-  "Cases added by the resolutions") has a test. Re-run `test-generator` with the plan if
-  coverage is incomplete.
-  - Expected after generation: the OQ-1/2/3/4/5/7/10 tests fail (app not changed yet),
-    the 5 shell tests below still fail, and everything else passes.
-
-Still to do, in this order:
-1. **App changes** (each has failing tests that pin it):
-   - **OQ-1** `App.jsx`: keep `DetectionView` mounted while History is shown, hidden
-     (`hidden` attribute / `display:none`, so it's out of the a11y tree). Mount
-     `HistoryView` only when active, so it refreshes per visit. An in-flight detection
-     must survive the switch.
-   - **OQ-2** `FilterBar.jsx`: when a *day* is picked in "To" (value time 00:00, date
-     changed), set it to that day at 23:59:00. Time-only edits keep their time.
-     `utils/history.js`: `buildHistoryParams` and `validateRange` treat "To" as
-     inclusive of its minute, so `end_date` = `toApiInstant(to)` + 60 s. Update the
-     ARCHITECTURE.md §4.1 Filters bullet.
-   - **OQ-3** `HistoryView.jsx`: on a successful clear, reset the draft and applied
-     filters, reload unfiltered, and show "Deleted N records." plus "No detections yet."
-   - **OQ-4** `HistoryTable.jsx`: name the pagination's previous and next controls
-     "Previous page" and "Next page" (Mantine `Pagination` `getControlProps`).
-   - **OQ-5** singular wording: the dialog says "This deletes the only record in the
-     history." and the button "Delete 1 record"; the chart summary says "1 detection";
-     the notice says "Deleted 1 record." (already singular).
-   - **OQ-7** `api/client.js` `getHistory`: trim fractional seconds to 3 digits before
-     `new Date(...)`.
-   - **OQ-10** `HistoryChart.jsx`: dots only, no connecting line (e.g. a Recharts
-     `Scatter`, or `Line` with `stroke="none"`). Keep the time axis and the a11y summary.
-2. ✅ **Done:** `test-healer` (re-run) fixed all 11 as test bugs: 5 outdated by M4, 5 by
-   OQ-2, and M4-fmt-02 (accepts either Kolkata alias). No app changes, and nothing
-   needed human review. Report: `test-plans/milestone-4-healer-report.md`. Docs updated
-   (ARCHITECTURE.md §4.1 and §4.3 for OQ-1/2/3/5/10), and the plan has a note on its
-   pre-OQ-2 case bodies.
-3. ✅ **Done:** frontend 230/230, backend 171/171, and the build passes.
-   (Superseded text of step 2 follows.) **Run `test-healer`** (it was the NEXT STEP; the first run was cut off by the usage limit before it
-   changed anything, so it was re-run from scratch. If no `test-plans/milestone-4-healer-report.md`
-   exists, it didn't finish: re-run it). 11 frontend tests fail: the 5 shell tests, 5 M4
-   cases written before the OQ-2 resolution (M4-params-02, M4-range-01, M4-tz-03,
-   M4-filter-05, M4-view-05; "To" is now inclusive of its minute, and From == To is now
-   valid), and M4-fmt-02 (Node/ICU reports "Asia/Calcutta" for "Asia/Kolkata"). Original
-   note: expected are only the 5 shell tests
-   M3-app-02 and M3b-shell-02..05, which the plan's Regression section classifies as
-   outdated by M4. With OQ-1, "no dropzone on History" becomes "dropzone not visible".
-   Show any "needs human review" items to the user.
-3. **Full runs:** `npm test`, `npx vite build` and backend pytest, all green.
-4. ✅ **Done (live, Chrome in front, read-only against :8000):**
-   - **OQ-1:** the Detect result (count 2, both boxes) survives Detect → History →
-     Detect, and History unmounts when left.
-   - **OQ-10:** the chart draws dots only, and History shows fresh data (the new 10:42 PM
-     record).
-   - **OQ-2:** picking Oct 1 in "To" snaps to "Oct 1, 2026 23:59", and Apply sends
-     `end_date=2026-10-01T21:00:00.000Z` (Athens midnight at the end of Oct 1), giving
-     the filtered empty state. "Reset filters" restores everything.
-   - **OQ-4:** pagination names "Previous page", 1–3, "Next page".
-   - **Dialog:** "Delete all 35 records" with the scope lines, and the × is named
-     "Close". Escape dismissed it, with no `/reset`.
-   - **Not run live (unit-tested only):** confirming a delete (needs a sandbox
-     backend), singular wording (needs exactly 1 record), the Firefox/Safari timestamp
-     check, and contrast.
-   (Original text of step 4 follows.) **Manual checks** from the plan, with the Chrome window in front (check
-   `document.visibilityState === "visible"`). Never confirm a delete against :8000;
-   the user's records live there. Delete-confirm checks use a sandbox backend on another
-   port with a temp `DB_PATH`.
-5. ✅ Entry updated and M4 marked done. **Remaining: commit (ask the user first).**
+**Testing gate (passed):**
+- `test-planner` wrote `test-plans/milestone-4.md` (59 cases, 13 manual checks). The user
+  resolved all open questions (see the plan's "Resolved decisions"): OQ-1 keep Detect
+  mounted, OQ-2 inclusive "To", OQ-3 reset filters after clear, OQ-4 pagination names,
+  OQ-5 singular wording, OQ-7 trim timestamps, OQ-10 dots-only chart. OQ-6 and OQ-8 are
+  accepted as is. OQ-9: ARCHITECTURE.md §2 updated, Recharts recorded.
+- App changes for OQ-1/2/3/4/5/7/10, plus `aria-label="Close"` on the modal's close
+  button (found by the generator).
+- `test-healer` fixed 11 test bugs (5 shell tests outdated by M4, 5 cases written before
+  OQ-2, and M4-fmt-02's Kolkata alias). No app changes, nothing for human review. Report:
+  `test-plans/milestone-4-healer-report.md`. ARCHITECTURE.md §4.1 and §4.3 updated.
+- Final: frontend 230/230, backend 171/171, build OK.
+- Live check in Chrome (read-only against :8000): OQ-1, OQ-2, OQ-4, OQ-10 and the
+  dialog scope all confirmed. Not run live (unit-tested only): confirming a delete,
+  singular wording, the Firefox/Safari timestamp check, and contrast.
 
 Optional, noted: `vite build` warns that the JS bundle is over 500 kB (Mantine, dates,
 Recharts). Lazy-loading `HistoryView` with `React.lazy` would split it.
-
-**Dev servers** (if not running):
-- Backend, from the root: `backend/.venv/bin/python -m uvicorn backend.main:app --port 8000`.
-- Frontend, in `frontend/`: `npx vite --port 5173`.
-- A detached backend may still be running from this session (PID in the scratchpad's
-  `uv.pid`).
 
 ### 2026-10-02 — Milestone 5: evaluation (done)
 
@@ -568,108 +490,49 @@ so these are unseen), stored in `backend/samples/coco-<id>.jpg`.
 `yolov8s.pt` was downloaded to the project root by ultralytics (gitignored, like
 `*.pt`).
 
-**RESUME CHECKLIST:**
-1. [x] **User chose YOLOv8s @0.5.** `.env` and the `config.py` default now use
-   `yolov8s.pt`. The official re-run gives 85.5% accuracy (59/69), 9.2% false positives
-   (6/65), 152 ms, 0.793 confidence and 100% reliability. Manual review gives 87.0%
-   (60/69) and 7.7% (5/65). The statue (0.79) is now also a false positive.
-   `results.json` is updated. (Original note follows.) Keep YOLOv8n (report 75% honestly as below target)
-   or switch the default model to YOLOv8s @0.5, which meets all targets on this set at
-   about 2× the time and is still far under 1.5 s. PROGRESS.md M1 said: "can swap to a
-   larger variant later if accuracy testing shows it's needed". If switching: change
-   `MODEL_PATH` in `.env` and the `config.py` default, update docs, and re-run the
-   official evaluation (`--out results.json`).
-2. [x] **Done:** the 16 COCO images are in `frontend/public/samples/` with a scenario-label
-   `index.json`. `bus.jpg`/`zidane.jpg` were removed (user approved). `CREDITS.md` is in
-   both samples folders. The frontend has 230/230 tests passing.
-   **One backend test now fails:** `test_logging.py::test_uvicorn_prints_detection_info_line`
-   loaded `frontend/public/samples/zidane.jpg`. That's a test-fixture issue for the M5
-   healer: use ultralytics `ASSETS` or a `backend/samples` image.
-   (Original note follows.) **Frontend samples:** copy the 16 COCO images to `frontend/public/samples/` and
-   rewrite `index.json` with scenario labels. Decide on `bus.jpg`/`zidane.jpg`: they
-   come from ultralytics' AGPL repo and zidane is a press photo, so their licence is
-   unclear. Recommend replacing them with COCO images; frontend tests mock the manifest.
-3. [x] **README.md written**, with the screenshot links pointing to `docs/screenshots/{detect-beach,history,detect-night}.jpg`. (Original note follows.) **README.md** (instructions.md "Code Quality" and "Testing & Validation"):
-   - purpose, architecture, setup and run for both apps, testing methodology;
-   - the metrics table with actual numbers (strict and manual review), per-image results
-     and failure cases (occlusion, low light, look-alikes);
-   - what worked, what could improve, known limitations (no auth on `/reset`,
-     `VITE_MAX_UPLOAD_MB` must match `MAX_UPLOAD_BYTES`, the Kolkata alias, the bundle
-     size), and image credits and licences.
-4. [x] **Screenshots done:** `docs/screenshots/detect-beach.jpg`, `detect-night.jpg` and
-   `history.jpg` (1568×730, taken through Chrome).
-   - **UI fix found while capturing:** 16 sample chips wrapped onto two lines and pushed
-     the image card below the fold. `ImageUploader` now shows chips for 4 or fewer
-     samples and a searchable `Select` for more.
-   - **Keyboard bug found and fixed:** typing a name and pressing Enter did nothing. It
-     now uses `selectFirstOptionOnChange` and `onOptionSubmit`.
-   - The frontend still passes 230/230, but **the new Select path has no tests yet**;
-     add them in the M5 gate.
-5. [ ] **M5 testing gate, in progress:**
-   - [x] Planner wrote `test-plans/milestone-5.md` (63 cases).
-   - [x] The user approved all of OQ-1..9 (see the plan's "Resolved decisions"), and also
-     approved updating `.claude/agents/test-planner.md` to YOLOv8s. The zip on the
-     Desktop stays untouched.
-   - [x] Docs and data done before generation:
-     - OQ-1/2: README false-positive wording;
-     - OQ-4: YOLOv8n references updated; ARCHITECTURE §2/§3.5/§7, the evaluate
-       docstring, pytest.ini, the test_integration docstring and the agent file;
-     - OQ-5: `compare-yolov8n.pt-0.5.json` re-run (75.4% / 5.5% / 0.772 / 62 ms) and the
-       README row updated, with a data-files note.
-   - [x] `test-generator` wrote the M5 tests (backend 283, frontend 244).
-   - [x] App changes done: OQ-3 (search text cleared on pick), OQ-6 (`manual_review` in
-     `ground_truth.json`; `run()` and `_summarize()` compute it), OQ-8 ("n/a") and OQ-9
-     (`TemporaryDirectory`). `results.json`'s summary was recomputed from its saved
-     per-image results, so detections and timings are unchanged and it now has
-     `manual_review`: 60/69 and 5/65.
-     - Result: frontend 244/244, backend 280/283.
-   - [x] `test-healer`: M5-score-05/06 were test bugs (the plan's 10 px geometry; now
-     ×10 with the same IoU values; the plan has a note), and `test_logging` now uses
-     ultralytics `ASSETS/zidane.jpg`. M5-int-01 passed 18/18 runs and its determinism
-     was verified, so nothing changed. Report: `test-plans/milestone-5-healer-report.md`.
-     - Full runs: backend 283/283, frontend 244/244, build OK.
-     - README notes the near-boundary detections (confidence 0.502, IoU 0.512).
-     - 86 leftover `/tmp/tmp*/eval.db` dirs from pre-OQ-9 runs were removed.
-   - [ ] **NEXT, needs the user:**
-     - (a) ✅ **The user confirmed both manual-review calls** (2026-10-02): 96493 counts as
-       correct, and 274460's background person stays a false positive. Original note:
-       96493 is counted as correct, and 274460's background person stays a false
-       positive.
-     - (b) ✅ **Done:** live check of the sample Select on a sandbox (backend :8001 with a
-       temp `DB_PATH`, Vite :5174), Chrome in front.
-       - It's a combobox named "Try a sample image", and the upload bar is one line (79 px).
-       - Typing "night" highlights the first match; Enter loads "Night dinner" (5 people)
-         and the field is "" immediately, with focus kept.
-       - At 360 px there's no horizontal scroll, and the Select and button stack inside
-         the bar.
-       - Isolation: the sandbox got 1 record and the user's :8000 history stayed at 38.
-         The sandbox is stopped and its files removed.
-     - ✅ M5 marked done. The user approved the commit.
-   - Original healer step: The 3 remaining failures:
-     - M5-score-05/06: a plan bug, the 10 px ground truth is under the 20 px visible rule;
-     - the `test_logging` `zidane.jpg` fixture.
+**Decisions:**
+- **Model: YOLOv8s @0.5** (user's choice). `.env`, the `config.py` default, the docs and
+  the agent file use `yolov8s.pt`. Official re-run: 85.5% accuracy (59/69), 9.2% false
+  positives (6/65), 152 ms, 0.793 confidence, 100% reliability. Manual review: 87.0%
+  (60/69) and 7.7% (5/65). The statue (0.79) is now also a false positive.
+- **Manual review** (user confirmed): 96493 counts as correct; 274460's background
+  person stays a false positive. Stored as `manual_review` in `ground_truth.json`.
+- **Frontend samples:** the 16 COCO images are in `frontend/public/samples/` with a
+  scenario-label `index.json`. `bus.jpg`/`zidane.jpg` were removed (unclear licence).
+  `CREDITS.md` is in both samples folders.
 
-     Also check M5-int-01: it failed once in the generator's `-m integration` run but
-     passes alone now, so it may be flaky.
-   - Original list of the app changes:
-     - **OQ-3** `ImageUploader` Select: clear the search text on option submit (controlled
-       `searchValue`).
-     - **OQ-6** `ground_truth.json` gets `"manual_review": [{file: "coco-96493.jpg",
-       decision: "count_as_correct", reason}]`. `evaluate.run()` adds
-       `summary.manual_review` with correct, false_positives, both percentages and
-       applied; it raises `ValueError` if an entry's image lacks a false positive or a
-       miss. Then re-run the evaluation so `results.json` holds it (60/69, 5/65).
-     - **OQ-8** `markdown()` prints "n/a" for `None` metrics.
-     - **OQ-9** `run()` uses a self-cleaning temp dir for its DB.
-   - The healer must also fix `test_logging.py`, which uses the removed `zidane.jpg`;
-     use ultralytics `ASSETS/zidane.jpg` instead.
-   The healer must also fix `test_logging.py`'s missing `zidane.jpg` fixture.
-   (Superseded text of steps 4 and 5 follows.)
-4. [ ] capture the 3 screenshots (the Chrome window must be in front; the backend was restarted detached with YOLOv8s, PID in the scratchpad's `uv.pid`). (Original note follows.) **2–3 screenshots** of successful detections in `docs/screenshots/`, taken through
-   Chrome with the window in front. Use the evaluation images (licensed).
-5. [ ] **Testing gate** for M5: planner (eval script, sample manifest, README claims
-   match `results.json`), generator, healer.
-6. [ ] Commit (ask the user first).
+**README.md** written: purpose, architecture, setup, testing methodology, the metrics
+table (strict and manual review), per-image results, failure cases, what worked and
+what could improve, known limitations, credits. Screenshots in
+`docs/screenshots/{detect-beach,history,detect-night}.jpg`.
+
+**UI fixes found while taking screenshots:** 16 sample chips wrapped onto two lines, so
+`ImageUploader` now shows chips for 4 or fewer samples and a searchable `Select` for
+more. Enter on a typed name now loads it (`selectFirstOptionOnChange`, `onOptionSubmit`).
+
+**Testing gate (passed):**
+- `test-planner` wrote `test-plans/milestone-5.md` (63 cases). The user approved OQ-1..9.
+- App changes: OQ-3 (search text cleared on pick), OQ-6 (`manual_review` computed by
+  `run()`/`_summarize()`), OQ-8 ("n/a" for missing metrics), OQ-9 (self-cleaning temp
+  DB). `compare-yolov8n.pt-0.5.json` re-run (OQ-5).
+- `test-healer`: M5-score-05/06 were test bugs (10 px geometry under the 20 px visible
+  rule); `test_logging` now uses ultralytics `ASSETS/zidane.jpg`. M5-int-01 passed
+  18/18 runs, so not flaky. Report: `test-plans/milestone-5-healer-report.md`.
+- Final: backend 283/283, frontend 244/244, build OK.
+- Live check of the sample Select on a sandbox (backend :8001 with a temp `DB_PATH`):
+  keyboard pick works, no horizontal scroll at 360 px, the user's history untouched.
+
+**Post-M5 check (2026-10-03):** backend 282 passed + 1 skipped (`test_live_health`
+needs a backend on :8000), frontend 244/244, build OK. Optional gaps noted, not
+required by the brief: `/detect` takes multipart only (no base64 body), and there is
+no ESLint config or `lint` script.
+
+### Bonus — not started
+
+Pick the bonus feature(s), give each a milestone entry here, and run the same testing
+gate. Candidates from the brief: live webcam with overlays (also covers "live video
+capture through browser"), region-based alerts, heatmaps or tracking lines, a
+statistics panel (average crowd size per hour), CSV/Excel export of history.
 
 ## Open decisions for later milestones
 
