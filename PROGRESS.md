@@ -15,7 +15,7 @@ Testing gate (end of every milestone), using the agents in `.claude/agents/`:
    goes to human review). It writes `test-plans/milestone-N-healer-report.md`.
 A milestone is done only when the suite passes and the human-review items are resolved.
 
-## Status: Milestone 5 complete — Evaluation (all core milestones done; bonus optional)
+## Status: core milestones 1–5 done; Milestone 6 (bonus: CSV export) planned
 
 ## Plan (milestones)
 
@@ -24,7 +24,8 @@ A milestone is done only when the suite passes and the human-review items are re
 3. **Frontend detection view** — upload + bounding box overlay *(done)*
 4. **Frontend history view** — table/chart + filters *(done)*
 5. **Evaluation** — run the 10 sample images, fill in README metrics table *(done)*
-6. **Bonus (optional)** — webcam/alerts/heatmaps/etc.
+6. **Bonus: CSV export** — `/history/export` + Export button *(planned)*
+7. **Bonus (later)** — webcam/alerts/heatmaps/stats panel
 
 ## Log
 
@@ -527,12 +528,47 @@ needs a backend on :8000), frontend 244/244, build OK. Optional gaps noted, not
 required by the brief: `/detect` takes multipart only (no base64 body), and there is
 no ESLint config or `lint` script.
 
-### Bonus — not started
+### Milestone 6 (bonus): CSV export of history — planned, not started
 
-Pick the bonus feature(s), give each a milestone entry here, and run the same testing
-gate. Candidates from the brief: live webcam with overlays (also covers "live video
-capture through browser"), region-based alerts, heatmaps or tracking lines, a
-statistics panel (average crowd size per hour), CSV/Excel export of history.
+**Why first:** the smallest bonus, and it softens the hard-delete `/reset`: users can keep
+their own copy before clearing (see PRODUCTION.md §1.3).
+
+**Backend:** `GET /history/export` in `routes/history.py`.
+- Takes the same `start_date`, `end_date` and `min_confidence` filters as `/history`,
+  reusing `parse_bound`/`parse_min_confidence` and `storage.list()`, with the same 400s.
+- Returns `text/csv; charset=utf-8` with
+  `Content-Disposition: attachment; filename="detecto-history-<UTC yyyymmdd-hhmmss>.csv"`.
+- Columns: `id,timestamp_utc,person_count,average_confidence,inference_time_ms`, one
+  row per record, oldest first. Timestamps are UTC ISO 8601 with `Z`. Built with the
+  `csv` module. An empty result still returns the header row.
+- CSV injection isn't possible today (every cell is a number or a timestamp we
+  generate); note this so a future text column (e.g. camera name) gets escaped.
+
+**Frontend:**
+- `api/client.js`: `exportHistory(params)` fetches the CSV as a blob (so errors go
+  through `ApiError` like everywhere else) and triggers the download with an object URL
+  and the server's filename.
+- History page: an **Export CSV** button next to Clear history. It exports the
+  **applied filters**, and says so ("Export 24 records" when filtered, "Export all N
+  records" otherwise). Disabled while loading or when there are no records.
+- Clear-history dialog: a **Download a copy first** link that exports *all* records
+  (the scope of the delete, not the filters).
+
+**Docs:** README (features, API list, the known-limitations reset line), ARCHITECTURE.md
+§3.3 and §6.
+
+**Open questions (to settle before building):**
+- OQ-1: CSV only, or also `.xlsx` (needs `openpyxl`)? Recommendation: CSV only; it opens
+  in Excel, and the brief says "CSV or Excel".
+- OQ-2: should the export follow the filters (recommended) or always export everything?
+- OQ-3: UTC timestamps only (recommended; unambiguous), or also a local-time column
+  (would need the browser to send its time zone)?
+
+**Then:** the testing gate (planner → generator → healer) as for M1–M5.
+
+**Other bonus candidates (later):** live webcam with overlays (also covers "live video
+capture through browser"), region-based alerts, heatmaps or tracking lines, a statistics
+panel (average crowd size per hour).
 
 ## Open decisions for later milestones
 

@@ -21,7 +21,7 @@ It has a **FastAPI** backend that runs **YOLOv8s** (Ultralytics) on the CPU, and
 - [Tests](#tests)
 - [Evaluation: methodology and results](#evaluation-methodology-and-results)
 - [What worked, what could be improved](#what-worked-what-could-be-improved)
-- [Known limitations](#known-limitations)
+- [Known limitations](#known-limitations) (and [PRODUCTION.md](PRODUCTION.md): next steps for a real deployment)
 - [Image credits](#image-credits)
 
 ## Features
@@ -285,8 +285,11 @@ default to **YOLOv8s**:
   screenshot), their `#n · NN%` labels can overlap. A small layout pass could offset them.
 
 ## Known limitations
-- **No authentication:** anyone who can reach the API can call `DELETE /reset` and wipe
-  the history. That's acceptable for a local demo, not for a deployment.
+- **No authentication or roles:** anyone who can reach the API can call `DELETE /reset`
+  and wipe the history. That's acceptable for a local demo, not for a deployment, which
+  would need login, roles (only an admin can clear history) and an audit log.
+- **Reset is a hard delete:** `/reset` removes the rows for good; there is no archive or
+  retention policy.
 - **Upload limit set twice:** `VITE_MAX_UPLOAD_MB` (frontend pre-check) must match
   `MAX_UPLOAD_BYTES` (backend). A test checks that the shipped values agree.
 - **Base64 JSON input to `/detect`** (in the original brief) is deferred. Only multipart
@@ -295,6 +298,10 @@ default to **YOLOv8s**:
   its legacy alias "Asia/Calcutta".
 - **Bundle size:** the frontend bundle is over 500 kB (Mantine, the date pickers and
   Recharts). The History page could be lazy-loaded.
+
+These and the other steps from demo to production (HTTPS, non-blocking inference,
+multiple cameras, PostgreSQL, monitoring, model drift) are written up in
+[PRODUCTION.md](PRODUCTION.md).
 
 ## Image credits
 The sample images are from the [COCO 2017](https://cocodataset.org) validation set and are
