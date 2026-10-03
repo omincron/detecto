@@ -15,7 +15,7 @@ Testing gate (end of every milestone), using the agents in `.claude/agents/`:
    goes to human review). It writes `test-plans/milestone-N-healer-report.md`.
 A milestone is done only when the suite passes and the human-review items are resolved.
 
-## Status: core milestones 1–5 done; Milestone 6 (bonus: CSV export) done
+## Status: core milestones 1–5 and bonus M6 (CSV export) done; M7 (webcam) planned, starts 2026-10-04
 
 ## Plan (milestones)
 
@@ -25,7 +25,8 @@ A milestone is done only when the suite passes and the human-review items are re
 4. **Frontend history view** — table/chart + filters *(done)*
 5. **Evaluation** — run the 10 sample images, fill in README metrics table *(done)*
 6. **Bonus: CSV export** — `/history/export` + Export button *(done)*
-7. **Bonus (later)** — webcam/alerts/heatmaps/stats panel
+7. **Bonus: live webcam detection** — camera frames → `/detect`, overlay on video *(planned, not started)*
+8. **Bonus (later)** — alerts/heatmaps/stats panel
 
 ## Log
 
@@ -613,9 +614,88 @@ yet), build OK. Smoke-tested the endpoint with TestClient on a temp DB.
    ~/Downloads (`detecto-history-20261003-*.csv`).
 5. [x] M6 marked done. Remaining: commit (ask the user first).
 
-**Other bonus candidates (later):** live webcam with overlays (also covers "live video
-capture through browser"), region-based alerts, heatmaps or tracking lines, a statistics
-panel (average crowd size per hour).
+**Other bonus candidates (later):** region-based alerts, heatmaps or tracking lines, a
+statistics panel (average crowd size per hour).
+
+### Milestone 7 (bonus): live webcam detection — planned, NOT started (start 2026-10-04)
+
+**Covers two brief bonuses:** "real-time webcam or CCTV feed with detection overlays" and
+"live video capture through browser or local camera". It also covers the Detection View's
+"upload **or stream** video frames".
+
+**Proposed design** (ARCHITECTURE §6 already names this seam: reuse `/detect` per frame):
+- **Capture in the browser:** `navigator.mediaDevices.getUserMedia({video: true})` into a
+  `<video>`. Each frame goes to a canvas, then `canvas.toBlob(…, "image/jpeg", ~0.8)`,
+  then the existing multipart `POST /detect`. No new upload path and no base64; all the
+  validation stays the same.
+- **Back-pressure, not a timer:** send the next frame only when the previous response
+  is back, capped at a max rate (e.g. 5 fps). A slow backend lowers the frame rate
+  instead of building a queue, and the latest-request guard from the upload flow stays.
+- **Overlay on video:** the boxes are percentages of the processed frame
+  (`imageWidth` x `imageHeight`), so the `BoundingBoxOverlay` math works unchanged. The
+  component renders an `<img>` today, so it needs a variant (or a children slot) that
+  wraps a `<video>`. Draw the last result's boxes until the next one arrives.
+- **Live stats:** people count, average confidence, model time, round trip and the
+  real frames per second.
+- **UI:** a mode switch on the Detect page, "Upload image" / "Live camera", with
+  Start/Stop, a visible "camera on" indicator, and clear errors for: permission denied,
+  no camera, camera in use by another app, and unsupported browser or insecure context.
+- **Lifecycle (important):** Detect stays mounted while hidden (M4 OQ-1). The camera must
+  stop when the user goes to History, the tab is hidden (`visibilitychange`), the mode
+  switches, or the component unmounts. Stop every track so the camera light goes off.
+- **Backend: non-blocking inference** (PRODUCTION.md §2.1). `/detect` is `async` but
+  calls the model synchronously, so a frame stream would block `/health` and `/history`.
+  Run `detector.detect` in a worker thread (`run_in_threadpool`), with a lock (or a
+  single-worker executor), because a YOLO model isn't guaranteed thread-safe. Test that
+  `/health` answers while a slow fake inference runs.
+
+**Open questions (to settle before building):**
+- OQ-1: **History flooding.** Every `/detect` saves a record, so 5 fps gives about 18,000
+  records an hour. Options: (a) `/detect?record=false` for live frames, and the frontend
+  saves one sample every N seconds (e.g. every 5 s, with `record=true`); (b) record every
+  frame; (c) add a `source` column (upload/camera) to the schema and the filters.
+  Recommendation: (a), with N in a config setting. (c) would fit the "camera_id" item in
+  PRODUCTION.md §2.3 later.
+- OQ-2: **Max rate:** 5 fps, or as fast as the backend allows? Recommendation: 5 fps cap
+  (YOLOv8s takes about 150 ms on this CPU, so at most about 6 fps anyway).
+- OQ-3: **Frame size:** send the camera's native resolution (often 1280x720), or downscale
+  first (e.g. 640 px wide) for speed? The backend already resizes to at most 1280 px.
+  Recommendation: 960 or 640 px wide, JPEG quality 0.8; measure both.
+- OQ-4: **Transport:** HTTP per frame (recommended: reuses everything, easy to test) or a
+  WebSocket `/detect/stream`? A WebSocket saves per-request overhead but adds a second
+  protocol to test. Possibly later.
+- OQ-5: **Camera picker:** default camera only, or a device `Select` when there are
+  several? Recommendation: a Select when there is more than one camera.
+- OQ-6: **Mirroring:** show the self-view mirrored (like video calls)? If yes, the overlay
+  must mirror with it, and the frame sent must stay unmirrored.
+- OQ-7: **The annotated image or the boxes?** Recommendation: boxes only (as today;
+  `return_annotated=false`), because the overlay is drawn in the browser.
+
+**Testing approach:**
+- **Unit (jsdom):** mock `getUserMedia`, `HTMLMediaElement`, the canvas and `toBlob`.
+  Test the loop's back-pressure and rate cap with fake timers, every stop path
+  (navigation, `visibilitychange`, unmount, mode switch, errors), each error message,
+  and that tracks are stopped.
+- **Backend:** the threadpool change (`/health` stays responsive during a slow detect),
+  `record=false` (if OQ-1 (a)), and regressions for every existing `/detect` case.
+- **Manual in Chrome:** with a real camera, or Chrome's fake device
+  (`--use-fake-device-for-media-stream --use-fake-ui-for-media-stream`): boxes follow
+  people, the frame rate, the camera light goes off on Stop and on History, the
+  permission-denied path. Use a sandbox backend (temp `DB_PATH`) so :8000 history stays
+  clean.
+
+**Docs:** README (features, screenshot of live mode), ARCHITECTURE §3.3/§4.1/§4.3/§6, and
+mark PRODUCTION.md §2.1 as partly done.
+
+**RESUME CHECKLIST (tomorrow):**
+1. [ ] Go through OQ-1..7 with the user.
+2. [ ] Backend: non-blocking inference (+ `record` param if OQ-1 (a)), with tests.
+3. [ ] Frontend: camera hook (`useCamera`), frame loop (`useDetectionStream`), video
+   overlay, live mode UI, stop paths.
+4. [ ] Docs.
+5. [ ] Testing gate: planner, then the user resolves OQs, generator, healer, manual
+   Chrome checks (window in front).
+6. [ ] Commit (ask the user first).
 
 ## Open decisions for later milestones
 
